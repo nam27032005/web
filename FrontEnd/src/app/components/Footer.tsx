@@ -13,17 +13,17 @@ export function Footer() {
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-white">
-                Easy<span className="text-emerald-400">Accomod</span>
+                7 <span className="text-emerald-400">trọ</span>
               </span>
             </div>
             <p className="text-sm text-gray-400 mb-4">
               Hệ thống tìm nhà trọ hàng đầu Việt Nam. Kết nối chủ nhà và người thuê một cách nhanh chóng, an toàn.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors">
+              <a href="https://facebook.com/7tro" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors">
+              <a href="https://youtube.com/@7tro" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-emerald-600 transition-colors">
                 <Youtube className="w-4 h-4" />
               </a>
             </div>
@@ -47,14 +47,14 @@ export function Footer() {
               <li><Link to="/register?role=owner" className="hover:text-emerald-400 transition-colors">Đăng ký tài khoản</Link></li>
               <li><Link to="/owner" className="hover:text-emerald-400 transition-colors">Đăng bài cho thuê</Link></li>
               <li><Link to="/owner" className="hover:text-emerald-400 transition-colors">Quản lý bài đăng</Link></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Bảng giá đăng tin</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Hướng dẫn đăng tin</a></li>
+              <li><Link to="/pricing" className="hover:text-emerald-400 transition-colors">Bảng giá đăng tin</Link></li>
+              <li><Link to="/guide" className="hover:text-emerald-400 transition-colors">Hướng dẫn đăng tin</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold text-white mb-4">Liên hệ AccomodCorp</h4>
+            <h4 className="font-semibold text-white mb-4">Liên hệ 7 Trọ</h4>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-0.5 text-emerald-400 flex-shrink-0" />
@@ -66,18 +66,18 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span>support@easyaccomod.vn</span>
+                <span>support@7tro.vn</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <p>© 2026 AccomodCorp. Tất cả quyền được bảo lưu.</p>
+          <p>© 2026 7 Trọ. Tất cả quyền được bảo lưu.</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-gray-300">Điều khoản sử dụng</a>
-            <a href="#" className="hover:text-gray-300">Chính sách bảo mật</a>
-            <a href="#" className="hover:text-gray-300">Quy chế hoạt động</a>
+            <Link to="/terms" className="hover:text-gray-300">Điều khoản sử dụng</Link>
+            <Link to="/privacy" className="hover:text-gray-300">Chính sách bảo mật</Link>
+            <Link to="/rules" className="hover:text-gray-300">Quy chế hoạt động</Link>
           </div>
         </div>
       </div>

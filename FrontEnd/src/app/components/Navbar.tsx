@@ -13,13 +13,17 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Building2,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
+import { useTheme } from "../context/ThemeContext";
 
 export function Navbar() {
   const { currentUser, logout, isAuthenticated, isRole } = useAuth();
   const { getNotificationsForUser, markAllNotificationsRead } = useApp();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,7 +54,7 @@ export function Navbar() {
       : "text-gray-600 hover:text-emerald-600";
 
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
+    <nav className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -58,8 +62,8 @@ export function Navbar() {
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
               <Building2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">
-              Easy<span className="text-emerald-600">Accomod</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">
+              7 <span className="text-emerald-600">trọ</span>
             </span>
           </Link>
 
@@ -90,6 +94,17 @@ export function Navbar() {
 
           {/* Right Side */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Dark/Light Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
+            >
+              {theme === 'dark'
+                ? <Sun className="w-5 h-5 text-yellow-400" />
+                : <Moon className="w-5 h-5 text-gray-600" />}
+            </button>
+
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
@@ -137,23 +152,23 @@ export function Navbar() {
                 <div className="relative">
                   <button
                     onClick={() => setProfileOpen((v) => !v)}
-                    className="flex items-center gap-2 hover:bg-gray-100 rounded-full pl-1 pr-3 py-1 transition-colors"
+                    className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full pl-1 pr-3 py-1 transition-colors"
                   >
                     <img
                       src={currentUser?.avatar}
                       alt={currentUser?.name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
-                    <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-[100px] truncate">
                       {currentUser?.name}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
                   {profileOpen && (
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
-                      <div className="p-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-800">{currentUser?.name}</p>
-                        <p className="text-xs text-gray-500">{currentUser?.email}</p>
+                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-50">
+                      <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
                         <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${
                           currentUser?.role === "admin" ? "bg-purple-100 text-purple-700" :
                           currentUser?.role === "owner" ? "bg-blue-100 text-blue-700" :
@@ -209,11 +224,11 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 space-y-1">
-          <Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm text-gray-700 hover:text-emerald-600">
+        <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-1">
+          <Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-emerald-600">
             <Home className="w-4 h-4" />Trang chủ
           </Link>
-          <Link to="/search" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm text-gray-700 hover:text-emerald-600">
+          <Link to="/search" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-emerald-600">
             <Search className="w-4 h-4" />Tìm phòng
           </Link>
           {isAuthenticated && isRole("renter") && (
@@ -233,7 +248,7 @@ export function Navbar() {
           )}
           {!isAuthenticated ? (
             <div className="flex gap-2 pt-2">
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm text-gray-700 border border-gray-300 py-2 rounded-lg">
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm text-gray-700 dark:text-gray-200 border border-gray-300 py-2 rounded-lg">
                 Đăng nhập
               </Link>
               <Link to="/register" onClick={() => setMenuOpen(false)} className="flex-1 text-center text-sm bg-emerald-600 text-white py-2 rounded-lg">
@@ -245,6 +260,17 @@ export function Navbar() {
               <LogOut className="w-4 h-4" />Đăng xuất
             </button>
           )}
+          {/* Mobile Dark Toggle */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 py-2 text-sm text-gray-700 dark:text-gray-200 w-full"
+            >
+              {theme === 'dark'
+                ? <><Sun className="w-4 h-4 text-yellow-400" />Chuyển sang sáng</>
+                : <><Moon className="w-4 h-4" />Chuyển sang tối</>}
+            </button>
+          </div>
         </div>
       )}
     </nav>

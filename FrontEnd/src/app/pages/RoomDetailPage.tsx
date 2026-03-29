@@ -126,15 +126,15 @@ export function RoomDetailPage() {
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-12">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-12">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 text-sm text-gray-500">
           <Link to="/" className="hover:text-emerald-600">Trang chủ</Link>
           <span>/</span>
           <Link to="/search" className="hover:text-emerald-600">Tìm phòng</Link>
           <span>/</span>
-          <span className="text-gray-900 line-clamp-1">{room.title}</span>
+          <span className="text-gray-900 dark:text-white line-clamp-1">{room.title}</span>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export function RoomDetailPage() {
           {/* LEFT */}
           <div className="lg:col-span-2 space-y-5">
             {/* Image Gallery */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative h-64 md:h-96">
                 <img
                   src={room.images[activeImg]}
@@ -193,7 +193,7 @@ export function RoomDetailPage() {
             </div>
 
             {/* Title & Main Info */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
               <div className="flex items-start gap-3 mb-3">
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -206,7 +206,7 @@ export function RoomDetailPage() {
                       {room.status === "available" ? "Còn trống" : "Đã có người thuê"}
                     </span>
                   </div>
-                  <h1 className="text-xl font-bold text-gray-900">{room.title}</h1>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">{room.title}</h1>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
@@ -231,15 +231,15 @@ export function RoomDetailPage() {
               <div className="grid grid-cols-3 gap-4 py-4 border-y border-gray-100">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-emerald-600">{formatPrice(room.price)}</p>
-                  <p className="text-xs text-gray-500">/{room.priceUnit === "month" ? "tháng" : room.priceUnit === "quarter" ? "quý" : "năm"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">/{room.priceUnit === "month" ? "tháng" : room.priceUnit === "quarter" ? "quý" : "năm"}</p>
                 </div>
                 <div className="text-center border-x border-gray-100">
-                  <p className="text-2xl font-bold text-gray-800">{room.area}</p>
-                  <p className="text-xs text-gray-500">m² diện tích</p>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{room.area}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">m² diện tích</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800">{room.roomCount}</p>
-                  <p className="text-xs text-gray-500">phòng ngủ</p>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{room.roomCount}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">phòng ngủ</p>
                 </div>
               </div>
 
@@ -263,9 +263,9 @@ export function RoomDetailPage() {
             </div>
 
             {/* Description */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-3">Mô tả chi tiết</h2>
-              <p className="text-sm text-gray-600 leading-relaxed">{room.description}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Mô tả chi tiết</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{room.description}</p>
 
               {room.nearBy.length > 0 && (
                 <div className="mt-4">
@@ -282,13 +282,13 @@ export function RoomDetailPage() {
             </div>
 
             {/* Facilities */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-4">Điều kiện cơ sở vật chất</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Điều kiện cơ sở vật chất</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {facilityItems.map((item, i) => (
-                  <div key={i} className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-xl">
+                  <div key={i} className="flex flex-col items-center text-center p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
                     <div className="text-emerald-600 mb-1">{item.icon}</div>
-                    <p className="text-xs text-gray-500">{item.label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.label}</p>
                     <p className="text-xs font-medium text-gray-800 mt-0.5">{item.value}</p>
                   </div>
                 ))}
@@ -308,9 +308,9 @@ export function RoomDetailPage() {
             </div>
 
             {/* Reviews */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-gray-900">
+                <h2 className="font-semibold text-gray-900 dark:text-white">
                   Đánh giá ({roomReviews.length})
                 </h2>
                 {isAuthenticated && currentUser?.role === "renter" && !reviewDone && (
@@ -331,7 +331,7 @@ export function RoomDetailPage() {
               )}
 
               {showReviewForm && (
-                <form onSubmit={handleReview} className="bg-gray-50 rounded-xl p-4 mb-4">
+                <form onSubmit={handleReview} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 mb-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Đánh giá của bạn</p>
                   <div className="flex gap-1 mb-3">
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -373,7 +373,7 @@ export function RoomDetailPage() {
                       <img src={rev.userAvatar} alt={rev.userName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-gray-900">{rev.userName}</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{rev.userName}</span>
                           <div className="flex">
                             {[1, 2, 3, 4, 5].map((s) => (
                               <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`} />
@@ -381,7 +381,7 @@ export function RoomDetailPage() {
                           </div>
                           <span className="text-xs text-gray-400">{rev.createdAt}</span>
                         </div>
-                        <p className="text-sm text-gray-600">{rev.comment}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{rev.comment}</p>
                       </div>
                     </div>
                   ))}
@@ -390,7 +390,7 @@ export function RoomDetailPage() {
             </div>
 
             {/* Report */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm">
               <button
                 onClick={() => setShowReport(!showReport)}
                 className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors"
@@ -411,7 +411,7 @@ export function RoomDetailPage() {
                         <select
                           value={reportReason}
                           onChange={(e) => setReportReason(e.target.value)}
-                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-red-400"
+                          className="w-full text-sm border bg-white dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-red-400"
                           required
                         >
                           <option value="">Chọn lý do...</option>
@@ -445,13 +445,13 @@ export function RoomDetailPage() {
           {/* RIGHT Sidebar */}
           <div className="space-y-4">
             {/* Contact Card */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm sticky top-24">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm sticky top-24">
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
                 <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{room.ownerName}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{room.ownerName}</p>
                   <div className="flex items-center gap-1 text-xs text-emerald-600">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Đã xác thực</span>
@@ -472,15 +472,15 @@ export function RoomDetailPage() {
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Thời hạn đăng</span>
-                  <span className="text-gray-900 font-medium">{room.expiresAt || "—"}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{room.expiresAt || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Lượt xem</span>
-                  <span className="text-gray-900 font-medium">{room.views}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{room.views}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Lượt yêu thích</span>
-                  <span className="text-gray-900 font-medium">{room.favorites}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{room.favorites}</span>
                 </div>
               </div>
 

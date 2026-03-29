@@ -28,7 +28,7 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
 
   return (
     <Link to={`/room/${room.id}`} className="group block">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
         {/* Image */}
         <div className="relative h-48 overflow-hidden">
           <img
@@ -38,7 +38,7 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
           />
           {/* Status badge */}
           <div className="absolute top-3 left-3 flex gap-2">
-            <span className="bg-white text-gray-700 text-xs px-2 py-1 rounded-full shadow-sm font-medium">
+            <span className="bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs px-2 py-1 rounded-full shadow-sm font-medium backdrop-blur-sm">
               {ROOM_TYPE_LABELS[room.roomType]}
             </span>
           </div>
@@ -53,10 +53,10 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
           {/* Favorite button */}
           <button
             onClick={handleFavorite}
-            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all ${
+            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all focus:outline-none ${
               isFavorite
                 ? "bg-red-500 text-white"
-                : "bg-white text-gray-400 hover:text-red-500"
+                : "bg-white/90 dark:bg-gray-800/90 text-gray-400 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 backdrop-blur-sm"
             }`}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
@@ -80,16 +80,16 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-emerald-600 transition-colors">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
             {room.title}
           </h3>
 
-          <div className="flex items-center gap-1 mt-1.5 text-gray-500">
+          <div className="flex items-center gap-1 mt-1.5 text-gray-500 dark:text-gray-400">
             <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="text-xs line-clamp-1">{room.address.district}, {room.address.city}</span>
           </div>
 
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Maximize2 className="w-3.5 h-3.5" />{room.area} m²
             </span>
@@ -103,12 +103,12 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
 
           <div className="flex items-center justify-between mt-3">
             <div>
-              <span className="text-emerald-600 font-bold text-base">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-base">
                 {formatPrice(room.price)}
               </span>
-              <span className="text-gray-400 text-xs">/{room.priceUnit === "month" ? "tháng" : room.priceUnit === "quarter" ? "quý" : "năm"}</span>
+              <span className="text-gray-400 dark:text-gray-500 text-xs">/{room.priceUnit === "month" ? "tháng" : room.priceUnit === "quarter" ? "quý" : "năm"}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
               <span className="flex items-center gap-0.5">
                 <Eye className="w-3.5 h-3.5" />{room.views}
               </span>

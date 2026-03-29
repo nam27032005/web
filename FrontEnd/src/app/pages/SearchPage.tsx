@@ -173,7 +173,7 @@ export function SearchPage() {
   const FilterSidebar = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">Bộ lọc</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white">Bộ lọc</h3>
         <button
           onClick={clearFilters}
           className="text-xs text-emerald-600 hover:text-emerald-700"
@@ -183,10 +183,10 @@ export function SearchPage() {
       </div>
 
       {/* Room Type */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
         <button
           onClick={() => toggleSection("type")}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 text-sm font-medium text-gray-700"
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200"
         >
           Loại phòng
           {filterSections.type ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -201,7 +201,7 @@ export function SearchPage() {
                 onChange={() => setSelectedType("")}
                 className="accent-emerald-600"
               />
-              <span className="text-sm text-gray-700">Tất cả</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Tất cả</span>
             </label>
             {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map((t) => (
               <label key={t} className="flex items-center gap-2 cursor-pointer">
@@ -212,7 +212,7 @@ export function SearchPage() {
                   onChange={() => setSelectedType(t)}
                   className="accent-emerald-600"
                 />
-                <span className="text-sm text-gray-700">{ROOM_TYPE_LABELS[t]}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{ROOM_TYPE_LABELS[t]}</span>
               </label>
             ))}
           </div>
@@ -220,10 +220,10 @@ export function SearchPage() {
       </div>
 
       {/* Price */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
         <button
           onClick={() => toggleSection("price")}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 text-sm font-medium text-gray-700"
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200"
         >
           Khoảng giá
           {filterSections.price ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -239,7 +239,7 @@ export function SearchPage() {
                   onChange={() => setPriceRange(i)}
                   className="accent-emerald-600"
                 />
-                <span className="text-sm text-gray-700">{r.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{r.label}</span>
               </label>
             ))}
           </div>
@@ -247,10 +247,10 @@ export function SearchPage() {
       </div>
 
       {/* Facilities */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
         <button
           onClick={() => toggleSection("facilities")}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 text-sm font-medium text-gray-700"
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200"
         >
           Tiện ích
           {filterSections.facilities ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -269,11 +269,11 @@ export function SearchPage() {
                   onChange={(e) => item.setter(e.target.checked)}
                   className="accent-emerald-600"
                 />
-                <span className="text-sm text-gray-700">{item.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{item.label}</span>
               </label>
             ))}
             <div className="mt-3">
-              <p className="text-xs font-medium text-gray-600 mb-2">Chung/không chung chủ</p>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Chung/không chung chủ</p>
               {[
                 { label: "Tất cả", value: "" },
                 { label: "Không chung chủ", value: "no" },
@@ -287,12 +287,12 @@ export function SearchPage() {
                     onChange={() => setSharedOwner(o.value as any)}
                     className="accent-emerald-600"
                   />
-                  <span className="text-sm text-gray-700">{o.label}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{o.label}</span>
                 </label>
               ))}
             </div>
             <div className="mt-3">
-              <p className="text-xs font-medium text-gray-600 mb-2">Bếp</p>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Bếp</p>
               {[
                 { label: "Tất cả", value: "" },
                 { label: "Bếp riêng", value: "private" },
@@ -307,7 +307,7 @@ export function SearchPage() {
                     onChange={() => setKitchen(o.value as any)}
                     className="accent-emerald-600"
                   />
-                  <span className="text-sm text-gray-700">{o.label}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{o.label}</span>
                 </label>
               ))}
             </div>
@@ -316,10 +316,10 @@ export function SearchPage() {
       </div>
 
       {/* Thành phố */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
         <button
           onClick={() => toggleSection("area")}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 text-sm font-medium text-gray-700"
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200"
         >
           Thành phố / Quận–Huyện
           {filterSections.area ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -327,11 +327,11 @@ export function SearchPage() {
         {filterSections.area && (
           <div className="p-3 space-y-2">
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Thành phố</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Thành phố</p>
               <select
                 value={selectedCity}
                 onChange={(e) => handleCityChange(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500 bg-white dark:bg-gray-800"
               >
                 {ALL_CITIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -340,11 +340,11 @@ export function SearchPage() {
             </div>
             {currentDistricts.length > 1 && (
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">Quận / Huyện</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Quận / Huyện</p>
                 <select
                   value={selectedDistrict}
                   onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500 bg-white dark:bg-gray-800"
                 >
                   {currentDistricts.map((d) => (
                     <option key={d} value={d}>{d}</option>
@@ -358,8 +358,8 @@ export function SearchPage() {
 
       {/* Nearby – tự động cập nhật theo thành phố */}
       {currentNearby.length > 0 && (
-        <div className="border border-gray-200 rounded-xl p-3">
-          <p className="text-sm font-medium text-gray-700 mb-2">Gần địa điểm</p>
+        <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Gần địa điểm</p>
           <div className="space-y-1.5">
             {currentNearby.map((n) => (
               <label key={n} className="flex items-center gap-2 cursor-pointer">
@@ -369,7 +369,7 @@ export function SearchPage() {
                   onChange={() => toggleNearby(n)}
                   className="accent-emerald-600"
                 />
-                <span className="text-xs text-gray-600">{n}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">{n}</span>
               </label>
             ))}
           </div>
@@ -379,19 +379,19 @@ export function SearchPage() {
   );
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Search Bar */}
-      <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-emerald-500 bg-white">
+            <div className="flex-1 flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 focus-within:border-emerald-500 bg-white dark:bg-gray-800">
               <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm theo địa chỉ, tên đường, trường đại học..."
-                className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
+                className="flex-1 text-sm outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400 bg-transparent"
               />
               {query && (
                 <button type="button" onClick={() => setQuery("")}>
@@ -409,7 +409,7 @@ export function SearchPage() {
               type="button"
               onClick={() => setShowFilters(!showFilters)}
               className={`md:hidden flex items-center gap-1 px-4 py-2 rounded-xl text-sm border ${
-                showFilters ? "border-emerald-500 text-emerald-600" : "border-gray-200 text-gray-600"
+                showFilters ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
               }`}
             >
               <SlidersHorizontal className="w-4 h-4" />Lọc
@@ -417,7 +417,7 @@ export function SearchPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="hidden md:block text-sm border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 text-gray-700"
+              className="hidden md:block text-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -437,9 +437,9 @@ export function SearchPage() {
           {/* Mobile filter */}
           {showFilters && (
             <div className="md:hidden fixed inset-0 bg-black/50 z-50 flex items-end">
-              <div className="bg-white rounded-t-2xl w-full max-h-[85vh] overflow-y-auto p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-t-2xl w-full max-h-[85vh] overflow-y-auto p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">Bộ lọc</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Bộ lọc</h3>
                   <button onClick={() => setShowFilters(false)}>
                     <X className="w-5 h-5 text-gray-500" />
                   </button>
@@ -459,12 +459,12 @@ export function SearchPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-600">
-                Tìm thấy <span className="font-semibold text-gray-900">{filteredRooms.length}</span> phòng
+                Tìm thấy <span className="font-semibold text-gray-900 dark:text-white">{filteredRooms.length}</span> phòng
               </p>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="md:hidden text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none text-gray-700"
+                className="md:hidden text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 outline-none text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -473,7 +473,7 @@ export function SearchPage() {
             </div>
 
             {filteredRooms.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+              <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
                 <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 font-medium">Không tìm thấy phòng trọ phù hợp</p>
                 <p className="text-sm text-gray-400 mt-1">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>

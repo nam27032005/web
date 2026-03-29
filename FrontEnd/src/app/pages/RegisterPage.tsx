@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { Eye, EyeOff, Building2, AlertCircle, CheckCircle, User, Home } from "lucide-react";
+import { Eye, EyeOff, Building2, AlertCircle, CheckCircle, User, Home, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export function RegisterPage() {
-  const { register } = useAuth();
+  const { sendRegisterOtp, register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const defaultRole = searchParams.get("role") === "owner" ? "owner" : "renter";
@@ -14,16 +14,38 @@ export function RegisterPage() {
     name: "",
     email: "",
     phone: "",
+    gender: "nam",
     password: "",
     confirmPassword: "",
     address: "",
     cccd: "",
   });
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<1 | 2>(1); // 1: Info, 2: OTP
+
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const getPasswordStrength = (pwd: string) => {
+    let s = 0;
+    if (pwd.length >= 8) s++;
+    if (/[a-z]/.test(pwd)) s++;
+    if (/[A-Z]/.test(pwd)) s++;
+    if (/[0-9]/.test(pwd)) s++;
+    if (/[^a-zA-Z0-9]/.test(pwd)) s++;
+    return s;
+  };
+
+  const getStrengthColor = (s: number) => {
+    if (s <= 1) return "bg-red-500";
+    if (s === 2) return "bg-orange-500";
+    if (s === 3) return "bg-amber-400";
+    if (s === 4) return "bg-blue-500";
+    return "bg-emerald-500";
+  };
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -32,7 +54,7 @@ export function RegisterPage() {
       errs.email = "Email không hợp lệ.";
     if (!form.phone.trim() || !/^0\d{9}$/.test(form.phone))
       errs.phone = "Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0).";
-    if (form.password.length < 6) errs.password = "Mật khẩu phải có ít nhất 6 ký tự.";
+    if (getPasswordStrength(form.password) < 5) errs.password = "Mật khẩu chưa đủ mạnh (đạt " + getPasswordStrength(form.password) + "/5 vạch).";
     if (form.password !== form.confirmPassword)
       errs.confirmPassword = "Mật khẩu xác nhận không khớp.";
     if (role === "owner") {
@@ -48,7 +70,7 @@ export function RegisterPage() {
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -56,15 +78,40 @@ export function RegisterPage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const result = register({
+    setError("");
+    try {
+      const result = await sendRegisterOtp(form.email, form.name);
+      if (result.success) {
+        setStep(2);
+      } else {
+        setError(result.message);
+      }
+    } catch (err: any) {
+      setError("Lỗi gửi OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setError("Vui lòng nhập mã OTP 6 số.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const result = await register({
         role,
         name: form.name,
         email: form.email,
         phone: form.phone,
+        gender: form.gender,
         password: form.password,
         address: form.address,
         cccd: form.cccd,
+        otp,
       });
       if (result.success) {
         setSuccess(true);
@@ -72,260 +119,282 @@ export function RegisterPage() {
       } else {
         setError(result.message);
       }
+    } catch (err: any) {
+      setError("Lỗi xác nhận đăng ký.");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-emerald-600" />
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Đăng ký thành công!</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Đăng ký thành công!</h2>
           {role === "owner" ? (
-            <p className="text-sm text-gray-600">
-              Tài khoản chủ nhà của bạn đã được tạo. Vui lòng liên hệ trực tiếp với AccomodCorp để xác nhận thông tin trước khi đăng bài.
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Tài khoản chủ nhà của bạn đã được tạo. Vui lòng liên hệ trực tiếp với 7 Trọ để xác nhận thông tin trước khi đăng bài.
             </p>
           ) : (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Tài khoản người thuê trọ của bạn đã được tạo và có thể sử dụng ngay.
             </p>
           )}
-          <div className="mt-4 text-sm text-emerald-600 animate-pulse">Đang chuyển hướng...</div>
+          <div className="mt-4 text-sm text-emerald-600 dark:text-emerald-400 animate-pulse">Đang chuyển hướng...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full">
         {/* Logo */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">
-              Easy<span className="text-emerald-600">Accomod</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              7 <span className="text-emerald-600">trọ</span>
             </span>
           </Link>
-          <h1 className="text-xl font-bold text-gray-900 mt-4">Tạo tài khoản mới</h1>
-          <p className="text-sm text-gray-500 mt-1">Tham gia cộng đồng tìm nhà trọ hàng đầu</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-4">Tạo tài khoản mới</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tham gia cộng đồng tìm nhà trọ hàng đầu</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          {/* Role Selection */}
-          <div className="mb-5">
-            <p className="text-sm font-medium text-gray-700 mb-3">Bạn là:</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole("renter")}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  role === "renter"
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <User className={`w-6 h-6 ${role === "renter" ? "text-emerald-600" : "text-gray-400"}`} />
-                <div>
-                  <p className={`text-sm font-medium ${role === "renter" ? "text-emerald-700" : "text-gray-700"}`}>
-                    Người thuê trọ
-                  </p>
-                  <p className="text-xs text-gray-400">Sử dụng ngay</p>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("owner")}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  role === "owner"
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Home className={`w-6 h-6 ${role === "owner" ? "text-emerald-600" : "text-gray-400"}`} />
-                <div>
-                  <p className={`text-sm font-medium ${role === "owner" ? "text-emerald-700" : "text-gray-700"}`}>
-                    Chủ nhà trọ
-                  </p>
-                  <p className="text-xs text-gray-400">Cần xác thực</p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {role === "owner" && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5">
-              <p className="text-xs text-amber-700">
-                ⚠️ Tài khoản chủ nhà cần được AccomodCorp xác nhận thủ công trước khi có thể đăng bài. Sau khi đăng ký, vui lòng liên hệ trực tiếp với công ty.
-              </p>
-            </div>
-          )}
-
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8">
+          
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+            <div className="flex items-center gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-3 py-2.5 mb-6">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Họ và tên <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={handleChange("name")}
-                placeholder="Nguyễn Văn A"
-                className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                  errors.name ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
-                }`}
-              />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={handleChange("email")}
-                placeholder="example@email.com"
-                className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                  errors.email ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
-                }`}
-              />
-              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Số điện thoại <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={handleChange("phone")}
-                placeholder="0912345678"
-                className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                  errors.phone ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
-                }`}
-              />
-              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-            </div>
-
-            {/* Owner specific fields */}
-            {role === "owner" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Số CCCD <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.cccd}
-                    onChange={handleChange("cccd")}
-                    placeholder="012345678901"
-                    maxLength={12}
-                    className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                      errors.cccd ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
+          {step === 1 ? (
+            <form onSubmit={handleNextStep} className="space-y-4">
+              {/* Role Selection */}
+              <div className="mb-5">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">Bạn là:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("renter")}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      role === "renter"
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
-                  />
-                  {errors.cccd && <p className="text-xs text-red-500 mt-1">{errors.cccd}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Địa chỉ thường trú <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.address}
-                    onChange={handleChange("address")}
-                    placeholder="Số nhà, đường, phường, quận, tỉnh/TP"
-                    className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                      errors.address ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
+                  >
+                    <User className={`w-5 h-5 ${role === "renter" ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`} />
+                    <p className={`text-sm font-medium ${role === "renter" ? "text-emerald-700 dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}`}>
+                      Người thuê
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("owner")}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      role === "owner"
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
-                  />
-                  {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
+                  >
+                    <Home className={`w-5 h-5 ${role === "owner" ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`} />
+                    <p className={`text-sm font-medium ${role === "owner" ? "text-emerald-700 dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}`}>
+                      Chủ nhà trọ
+                    </p>
+                  </button>
                 </div>
-              </>
-            )}
+              </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Mật khẩu <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 focus:border-red-500">
+                  Họ và tên
+                </label>
                 <input
-                  type={showPwd ? "text" : "password"}
-                  value={form.password}
-                  onChange={handleChange("password")}
-                  placeholder="Ít nhất 6 ký tự"
-                  className={`w-full text-sm border rounded-xl px-4 py-3 pr-11 outline-none focus:ring-2 transition-all ${
-                    errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
-                  }`}
+                  type="text"
+                  value={form.name}
+                  onChange={handleChange("name")}
+                  className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.name ? 'border-red-400 focus:ring-red-100' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-emerald-100 dark:focus:ring-emerald-900/30'}`}
                 />
+              </div>
+
+              {/* Email & Phone grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange("email")}
+                    className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.email ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Số điện thoại</label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={handleChange("phone")}
+                    className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.phone ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                  />
+                </div>
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Giới tính</label>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="nam" checked={form.gender === "nam"} onChange={handleChange("gender")} className="accent-emerald-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Nam</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="nữ" checked={form.gender === "nữ"} onChange={handleChange("gender")} className="accent-emerald-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Nữ</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="khác" checked={form.gender === "khác"} onChange={handleChange("gender")} className="accent-emerald-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Khác</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Owner Address & CCCD */}
+              {role === "owner" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Số CCCD</label>
+                    <input
+                      type="text"
+                      maxLength={12}
+                      value={form.cccd}
+                      onChange={handleChange("cccd")}
+                      className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.cccd ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Địa chỉ</label>
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={handleChange("address")}
+                      className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.address ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Passwords */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mật khẩu</label>
+                  <div className="relative">
+                    <input
+                      type={showPwd ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange("password")}
+                      className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 pr-10 outline-none focus:ring-2 transition-all ${errors.password ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                    />
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      {showPwd ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                    </button>
+                  </div>
+                  {/* Strength Bar */}
+                  {form.password.length > 0 && (
+                    <div className="mt-2 text-xs">
+                      <div className="flex gap-1 mb-1.5">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <div
+                            key={level}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                              getPasswordStrength(form.password) >= level
+                                ? getStrengthColor(getPasswordStrength(form.password))
+                                : "bg-gray-200 dark:bg-gray-700"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Yêu cầu: ≥ 8 ký tự, chữ hoa, chữ thường, số, ký tự đặc biệt.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Xác nhận MK</label>
+                  <input
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={handleChange("confirmPassword")}
+                    className={`w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${errors.confirmPassword ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 focus:border-emerald-500'}`}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-xs mt-1.5">{errors.confirmPassword}</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-3 rounded-xl font-medium text-sm transition-colors mt-2"
+              >
+                {loading ? "Đang xử lý..." : "Tiếp tục"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmitOtp} className="space-y-5">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Xác nhận Email</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Chúng tôi đã gửi mã xác nhận đến email <strong>{form.email}</strong>. Vui lòng kiểm tra hộp thư của bạn.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-center text-gray-700 dark:text-gray-300 mb-3">Nhập mã OTP (6 số)</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  className="w-full text-center text-2xl tracking-widest font-mono border bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-gray-700"
+                  placeholder="------"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-3 rounded-xl font-medium text-sm transition-colors"
+                >
+                  {loading ? "Đang xử lý..." : "Hoàn tất đăng ký"}
+                </button>
                 <button
                   type="button"
-                  onClick={() => setShowPwd((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  disabled={loading}
+                  onClick={() => setStep(1)}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium"
                 >
-                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Quay lại sửa thông tin
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
-            </div>
+            </form>
+          )}
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Xác nhận mật khẩu <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                value={form.confirmPassword}
-                onChange={handleChange("confirmPassword")}
-                placeholder="Nhập lại mật khẩu"
-                className={`w-full text-sm border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all ${
-                  errors.confirmPassword ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-gray-200 focus:border-emerald-500 focus:ring-emerald-100"
-                }`}
-              />
-              {errors.confirmPassword && (
-                <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            <div className="flex items-start gap-2">
-              <input type="checkbox" className="accent-emerald-600 mt-0.5" required />
-              <p className="text-xs text-gray-500">
-                Tôi đồng ý với{" "}
-                <a href="#" className="text-emerald-600 hover:underline">Điều khoản sử dụng</a> và{" "}
-                <a href="#" className="text-emerald-600 hover:underline">Chính sách bảo mật</a> của EasyAccomod.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-3 rounded-xl font-medium text-sm transition-colors"
-            >
-              {loading ? "Đang xử lý..." : "Đăng ký tài khoản"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500 mt-4">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
             Đã có tài khoản?{" "}
             <Link to="/login" className="text-emerald-600 font-medium hover:underline">
               Đăng nhập

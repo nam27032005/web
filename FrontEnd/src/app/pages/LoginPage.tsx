@@ -6,9 +6,10 @@ import { useAuth } from "../context/AuthContext";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(localStorage.getItem("savedEmail") || "");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [remember, setRemember] = useState(!!localStorage.getItem("savedEmail"));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,25 +21,27 @@ export function LoginPage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const result = login(email, password);
+    try {
+      const result = await login(email, password);
       if (result.success) {
+        if (remember) {
+          localStorage.setItem("savedEmail", email);
+        } else {
+          localStorage.removeItem("savedEmail");
+        }
         navigate("/");
       } else {
         setError(result.message);
       }
+    } catch (err: any) {
+      setError(err.message || "Lỗi đăng nhập.");
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
-  const DEMO_ACCOUNTS = [
-    { label: "Đăng nhập Admin", email: "admin@easyaccomod.vn", password: "admin123", color: "bg-purple-100 text-purple-700 border-purple-200" },
-    { label: "Đăng nhập Chủ nhà", email: "owner@test.vn", password: "owner123", color: "bg-blue-100 text-blue-700 border-blue-200" },
-    { label: "Đăng nhập Người thuê", email: "renter@test.vn", password: "renter123", color: "bg-green-100 text-green-700 border-green-200" },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -46,75 +49,53 @@ export function LoginPage() {
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">
-              Easy<span className="text-emerald-600">Accomod</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
+              7 <span className="text-emerald-600">trọ</span>
             </span>
           </Link>
-          <h1 className="text-xl font-bold text-gray-900 mt-2">Chào mừng trở lại!</h1>
-          <p className="text-sm text-gray-500 mt-1">Đăng nhập để sử dụng đầy đủ tính năng</p>
-        </div>
-
-        {/* Demo accounts */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
-          <p className="text-xs font-medium text-gray-500 mb-2 text-center">🔑 Tài khoản demo</p>
-          <div className="space-y-2">
-            {DEMO_ACCOUNTS.map((acc) => (
-              <button
-                key={acc.email}
-                onClick={() => {
-                  setEmail(acc.email);
-                  setPassword(acc.password);
-                }}
-                className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition-colors ${acc.color}`}
-              >
-                <span className="font-medium">{acc.label}</span>
-                <span className="ml-2 opacity-70">{acc.email}</span>
-              </button>
-            ))}
-          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-2">Chào mừng trở lại!</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Đăng nhập để sử dụng đầy đủ tính năng</p>
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8">
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+            <div className="flex items-center gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-3 py-2.5 mb-6">
               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@email.com"
-                className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all"
+                className="w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-emerald-100 dark:focus:ring-emerald-900/30"
                 autoComplete="email"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Mật khẩu <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Mật khẩu
               </label>
               <div className="relative">
                 <input
                   type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu"
-                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 pr-11 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  className="w-full text-sm border bg-white dark:bg-gray-900 dark:text-white rounded-xl px-4 py-3 pr-11 outline-none focus:ring-2 transition-all border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-emerald-100 dark:focus:ring-emerald-900/30"
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -123,12 +104,17 @@ export function LoginPage() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="accent-emerald-600" />
-                <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
+                <input
+                  type="checkbox"
+                  className="accent-emerald-600"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">Ghi nhớ tôi</span>
               </label>
-              <a href="#" className="text-sm text-emerald-600 hover:underline">
+              <Link to="/forgot-password" className="text-sm text-emerald-600 hover:underline">
                 Quên mật khẩu?
-              </a>
+              </Link>
             </div>
 
             <button
@@ -148,7 +134,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-4">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
             Chưa có tài khoản?{" "}
             <Link to="/register" className="text-emerald-600 font-medium hover:underline">
               Đăng ký ngay

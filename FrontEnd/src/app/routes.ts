@@ -10,6 +10,9 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { InfoPage } from "./pages/InfoPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +26,11 @@ export const router = createBrowserRouter([
       { path: "profile", Component: ProfilePage },
       { path: "owner", Component: OwnerDashboard },
       { path: "admin", Component: AdminDashboard },
+      { path: "pricing", Component: InfoPage },
+      { path: "guide", Component: InfoPage },
+      { path: "terms", Component: InfoPage },
+      { path: "privacy", Component: InfoPage },
+      { path: "rules", Component: InfoPage },
       { path: "*", Component: NotFoundPage },
     ],
   },
@@ -33,5 +41,13 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     Component: RegisterPage,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPasswordPage,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPasswordPage,
   },
 ]);

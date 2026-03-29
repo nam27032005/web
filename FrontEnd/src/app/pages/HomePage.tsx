@@ -66,7 +66,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Hero Section */}
       <section
         className="relative min-h-[520px] flex items-center"
@@ -87,7 +87,7 @@ export function HomePage() {
               <span className="text-emerald-300">nhanh chóng & dễ dàng</span>
             </h1>
             <p className="text-emerald-100 text-lg max-w-2xl mx-auto">
-              EasyAccomod kết nối người thuê và chủ nhà uy tín, minh bạch. Hàng nghìn căn phòng đang chờ bạn.
+              7 Trọ kết nối người thuê và chủ nhà uy tín, minh bạch. Hàng nghìn căn phòng đang chờ bạn.
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export function HomePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tìm theo địa chỉ, tên đường, trường đại học..."
-                  className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
+                  className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400 bg-transparent"
                 />
               </div>
               <div className="flex items-center gap-2 px-3 border-l border-gray-200">
@@ -112,10 +112,10 @@ export function HomePage() {
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
-                  className="text-sm text-gray-700 outline-none bg-transparent"
+                  className="text-sm text-gray-700 outline-none bg-transparent cursor-pointer"
                 >
                   {CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c} className="text-gray-900">{c}</option>
                   ))}
                 </select>
               </div>
@@ -144,9 +144,9 @@ export function HomePage() {
       </section>
 
       {/* Stats */}
-      <section className="bg-white border-b border-gray-100">
+      <section className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-700">
             {[
               { label: "Bài đăng đang hoạt động", value: `${stats.totalListings}+`, icon: <Building2 className="w-5 h-5 text-emerald-600" /> },
               { label: "Tỉnh/Thành phố", value: `${stats.totalCities}`, icon: <MapPin className="w-5 h-5 text-blue-500" /> },
@@ -155,8 +155,8 @@ export function HomePage() {
             ].map((s, i) => (
               <div key={i} className="flex flex-col items-center py-6 px-4">
                 <div className="mb-2">{s.icon}</div>
-                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500 text-center mt-1">{s.label}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">{s.label}</p>
               </div>
             ))}
           </div>
@@ -166,7 +166,7 @@ export function HomePage() {
       {/* Room Types */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Loại phòng phổ biến</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Loại phòng phổ biến</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {ROOM_TYPES.map((type) => {
               const count = rooms.filter((r) => r.roomType === type && r.postStatus === "approved").length;
@@ -174,13 +174,13 @@ export function HomePage() {
                 <button
                   key={type}
                   onClick={() => handleTypeSearch(type)}
-                  className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-emerald-300 hover:shadow-md transition-all group"
+                  className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-emerald-300 dark:hover:border-emerald-500 hover:shadow-md transition-all group"
                 >
-                  <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors">
+                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors">
                     {ROOM_TYPE_ICONS[type]}
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-800">{ROOM_TYPE_LABELS[type]}</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ROOM_TYPE_LABELS[type]}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{count} phòng</p>
                   </div>
                 </button>
@@ -194,7 +194,7 @@ export function HomePage() {
       <section className="pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Phòng trọ nổi bật</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Phòng trọ nổi bật</h2>
             <Link
               to="/search"
               className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
@@ -203,7 +203,7 @@ export function HomePage() {
             </Link>
           </div>
           {approvedRooms.length === 0 ? (
-            <p className="text-gray-500 text-center py-10">Chưa có phòng trọ nào được đăng.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-10">Chưa có phòng trọ nào được đăng.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {approvedRooms.map((room) => (
@@ -215,10 +215,10 @@ export function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-12">
+      <section className="bg-white dark:bg-gray-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">Cách thức hoạt động</h2>
-          <p className="text-gray-500 text-center mb-10">Tìm phòng chỉ trong vài bước đơn giản</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-3">Cách thức hoạt động</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-center mb-10">Tìm phòng chỉ trong vài bước đơn giản</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
@@ -242,15 +242,15 @@ export function HomePage() {
             ].map((item, i) => (
               <div key={i} className="text-center">
                 <div className="relative inline-flex">
-                  <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     {item.icon}
                   </div>
                   <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
                     {item.step}
                   </span>
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-500">{item.desc}</p>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
               </div>
             ))}
           </div>

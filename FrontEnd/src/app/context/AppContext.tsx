@@ -1,156 +1,289 @@
-import React, { createContext, useContext, useState } from "react";
-import {
-  Room,
-  Review,
-  Notification,
-  ChatMessage,
-  Report,
-  ROOMS,
-  REVIEWS,
-  NOTIFICATIONS,
-  CHAT_MESSAGES,
-  REPORTS,
-} from "../data/mockData";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import api from "../../lib/api";
+import { Room, Review, Notification, ChatMessage, Report, RoomStatus } from "../data/mockData";
+import { useAuth } from "./AuthContext";
 
 interface AppContextType {
   rooms: Room[];
   reviews: Review[];
   notifications: Notification[];
   chatMessages: ChatMessage[];
+  conversations: ChatMessage[];
+  activeChatUserId: string | null;
+  setActiveChatUserId: (id: string | null) => void;
   reports: Report[];
-  favorites: string[]; // roomIds
-  addRoom: (room: Room) => void;
-  updateRoom: (id: string, data: Partial<Room>) => void;
-  approveRoom: (id: string) => void;
-  rejectRoom: (id: string, reason: string) => void;
-  toggleFavorite: (roomId: string) => void;
-  addReview: (review: Review) => void;
-  approveReview: (id: string) => void;
-  rejectReview: (id: string) => void;
-  addNotification: (notif: Omit<Notification, "id">) => void;
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: (userId: string) => void;
-  sendChatMessage: (msg: Omit<ChatMessage, "id">) => void;
-  addReport: (report: Omit<Report, "id">) => void;
-  resolveReport: (id: string) => void;
+  favorites: string[];
+  addRoom: (room: Partial<Room>) => Promise<{success: boolean; message: string}>;
+  updateRoom: (id: string, data: Partial<Room>) => Promise<{success: boolean; message: string}>;
+  approveRoom: (id: string) => Promise<void>;
+  rejectRoom: (id: string, reason: string) => Promise<void>;
+  updateRoomStatus: (id: string, status: RoomStatus) => Promise<void>;
+  toggleFavorite: (roomId: string) => Promise<void>;
+  addReview: (review: Partial<Review>) => Promise<void>;
+  approveReview: (id: string) => Promise<void>;
+  rejectReview: (id: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: (userId: string) => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  sendChatMessage: (msg: Partial<ChatMessage>) => Promise<void>;
+  resolveReport: (id: string) => Promise<void>;
+  addReport: (report: Partial<Report>) => Promise<void>;
+  loadReports: () => Promise<void>;
   getNotificationsForUser: (userId: string) => Notification[];
   getChatForUser: (userId: string, adminId: string) => ChatMessage[];
+  loadRooms: () => Promise<void>;
+  loadChatMessages: (withUserId?: string) => Promise<void>;
   incrementViews: (roomId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [rooms, setRooms] = useState<Room[]>(ROOMS);
-  const [reviews, setReviews] = useState<Review[]>(REVIEWS);
-  const [notifications, setNotifications] = useState<Notification[]>(NOTIFICATIONS);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(CHAT_MESSAGES);
-  const [reports, setReports] = useState<Report[]>(REPORTS);
-  const [favorites, setFavorites] = useState<string[]>(["room-001", "room-002"]);
+  const { currentUser, isAuthenticated } = useAuth();
+  
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [conversations, setConversations] = useState<ChatMessage[]>([]);
+  const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  const addRoom = (room: Room) => setRooms((prev) => [...prev, room]);
+  const loadRooms = useCallback(async () => {
+    try {
+      // By default get all API rooms
+      const res = await api.get("/rooms?limit=100");
+      if (res.data.success) setRooms(res.data.rooms);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
-  const updateRoom = (id: string, data: Partial<Room>) =>
-    setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+  const loadReviews = useCallback(async () => {
+    try {
+      const res = await api.get("/reviews");
+      if (res.data.success) setReviews(res.data.reviews);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
-  const approveRoom = (id: string) => {
-    const room = rooms.find((r) => r.id === id);
-    if (!room) return;
-    const now = new Date();
-    const expires = new Date(now);
-    if (room.displayDurationUnit === "week") expires.setDate(expires.getDate() + 7 * room.displayDuration);
-    else if (room.displayDurationUnit === "month") expires.setMonth(expires.getMonth() + room.displayDuration);
-    else if (room.displayDurationUnit === "quarter") expires.setMonth(expires.getMonth() + 3 * room.displayDuration);
-    else expires.setFullYear(expires.getFullYear() + room.displayDuration);
+  const loadNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.get("/notifications?limit=50");
+      if (res.data.success) setNotifications(res.data.notifications);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [isAuthenticated]);
 
-    updateRoom(id, {
-      postStatus: "approved",
-      approvedAt: now.toISOString().split("T")[0],
-      expiresAt: expires.toISOString().split("T")[0],
-    });
-    addNotification({
-      userId: room.ownerId,
-      title: "Bài đăng được duyệt",
-      message: `Bài đăng "${room.title}" đã được phê duyệt. Thời hạn hiển thị: ${room.displayDuration} ${room.displayDurationUnit}. Phí: ${room.postFee.toLocaleString("vi-VN")}đ.`,
-      read: false,
-      type: "approval",
+  const loadReports = useCallback(async () => {
+    if (!isAuthenticated || currentUser?.role !== "admin") return;
+    try {
+      const res = await api.get("/reports");
+      if (res.data.success) setReports(res.data.reports);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [isAuthenticated, currentUser]);
+
+  const loadChatMessages = useCallback(async (withUserId?: string) => {
+    if (!isAuthenticated) return;
+    try {
+      // 1. Fetch conversations (summaries)
+      const convRes = await api.get("/chat/conversations");
+      if (convRes.data.success) {
+        setConversations(convRes.data.conversations);
+      }
+
+      // 2. Fetch specific history if withUserId provided OR if there is an activeChatUserId
+      const targetId = withUserId || activeChatUserId;
+      if (targetId) {
+        const chatRes = await api.get(`/chat?withUserId=${targetId}`);
+        if (chatRes.data.success) {
+          setChatMessages(chatRes.data.messages);
+          if (withUserId) setActiveChatUserId(withUserId);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [isAuthenticated, activeChatUserId]);
+
+  useEffect(() => {
+    loadRooms();
+    loadReviews();
+  }, [loadRooms, loadReviews]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadNotifications();
+      // Initial chat load
+      loadChatMessages();
+      
+      const interval = setInterval(() => {
+        loadNotifications();
+        loadChatMessages();
+        if (currentUser?.role === "admin") {
+          loadReports();
+        }
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setNotifications([]);
+      setChatMessages([]);
+    }
+  }, [isAuthenticated, loadNotifications, loadChatMessages]);
+
+  // --- API Handlers ---
+  const addRoom = async (roomData: Partial<Room>) => {
+    try {
+      await api.post("/rooms", roomData);
+      loadRooms();
+      return { success: true, message: "Đăng bài thành công, chờ duyệt." };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || "Lỗi." };
+    }
+  };
+
+  const updateRoom = async (id: string, data: Partial<Room>) => {
+    try {
+      await api.put(`/rooms/${id}`, data);
+      loadRooms();
+      return { success: true, message: "Cập nhật thành công." };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || "Lỗi." };
+    }
+  };
+
+  const approveRoom = async (id: string) => {
+    await api.put(`/rooms/${id}/approve`);
+    loadRooms();
+  };
+
+  const rejectRoom = async (id: string, reason: string) => {
+    await api.put(`/rooms/${id}/reject`, { reason });
+    loadRooms();
+  };
+
+  const updateRoomStatus = async (id: string, status: RoomStatus) => {
+    await api.put(`/rooms/${id}/status`, { status });
+    loadRooms();
+  };
+
+  const toggleFavorite = async (roomId: string) => {
+    if (!isAuthenticated) return;
+    try {
+      const action = favorites.includes(roomId) ? "remove" : "add";
+      await api.post(`/rooms/${roomId}/favorite`, { action });
+      setFavorites(prev => action === "add" ? [...prev, roomId] : prev.filter(id => id !== roomId));
+      loadRooms();
+    } catch (err) { }
+  };
+
+  const addReview = async (review: Partial<Review>) => {
+    await api.post("/reviews", review);
+    loadReviews();
+  };
+
+  const approveReview = async (id: string) => {
+    await api.put(`/reviews/${id}/approve`);
+    loadReviews();
+  };
+
+  const rejectReview = async (id: string) => {
+    await api.put(`/reviews/${id}/reject`);
+    loadReviews();
+  };
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => (n._id === id || n.id === id) ? { ...n, read: true } : n));
+    } catch (err) {}
+  };
+
+  const markAllNotificationsRead = async () => {
+    await api.put("/notifications/read-all");
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+  
+  const deleteNotification = async (id: string) => {
+    try {
+      // 1. Immediate optimistic UI update
+      setNotifications(prev => prev.filter(n => (n._id !== id && n.id !== id)));
+      
+      // 2. Perform backend delete
+      const res = await api.delete(`/notifications/${id}`);
+      if (!res.data.success) {
+        // Rollback or re-load if delete failed
+        loadNotifications();
+      }
+    } catch (err) {
+      console.error("Lỗi khi xóa thông báo:", err);
+      loadNotifications(); // Refresh to restore on fail
+    }
+  };
+
+  const sendChatMessage = async (msgData: Partial<ChatMessage>) => {
+    // 1. Optimistic Update
+    const optimisticMsg: ChatMessage = {
+      _id: `temp-${Date.now()}`,
+      fromId: currentUser?._id || currentUser?.id,
+      fromName: currentUser?.name || "Bạn",
+      toId: typeof msgData.toId === 'object' ? (msgData.toId as any)._id : msgData.toId,
+      message: msgData.message || "",
       createdAt: new Date().toISOString(),
-    });
-  };
-
-  const rejectRoom = (id: string, reason: string) => {
-    const room = rooms.find((r) => r.id === id);
-    if (!room) return;
-    updateRoom(id, { postStatus: "rejected", rejectedReason: reason });
-    addNotification({
-      userId: room.ownerId,
-      title: "Bài đăng bị từ chối",
-      message: `Bài đăng "${room.title}" bị từ chối. Lý do: ${reason}`,
       read: false,
-      type: "rejection",
-      createdAt: new Date().toISOString(),
-    });
+    } as any;
+
+    setChatMessages(prev => [...prev, optimisticMsg]);
+
+    try {
+      const res = await api.post("/chat", msgData);
+      if (res.data.success) {
+        // Replace temp message with real one if needed, or just let polling handle it
+        setChatMessages(prev => prev.map(m => m._id === optimisticMsg._id ? res.data.message : m));
+        
+        // Refresh conversations list
+        const convRes = await api.get("/chat/conversations");
+        if (convRes.data.success) setConversations(convRes.data.conversations);
+      }
+    } catch (err) {
+      // Rollback on error
+      setChatMessages(prev => prev.filter(m => m._id !== optimisticMsg._id));
+    }
   };
 
-  const toggleFavorite = (roomId: string) => {
-    setFavorites((prev) =>
-      prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]
-    );
-    setRooms((prev) =>
-      prev.map((r) =>
-        r.id === roomId
-          ? { ...r, favorites: favorites.includes(roomId) ? r.favorites - 1 : r.favorites + 1 }
-          : r
-      )
-    );
+  const resolveReport = async (id: string) => {
+    try {
+      await api.put(`/reports/${id}/resolve`);
+      setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status: "resolved" } : r)));
+    } catch (err) {}
   };
 
-  const addReview = (review: Review) => setReviews((prev) => [...prev, review]);
-
-  const approveReview = (id: string) =>
-    setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, status: "approved" } : r)));
-
-  const rejectReview = (id: string) =>
-    setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)));
-
-  const addNotification = (notif: Omit<Notification, "id">) => {
-    const newNotif: Notification = { ...notif, id: `notif-${Date.now()}` };
-    setNotifications((prev) => [newNotif, ...prev]);
+  const addReport = async (report: Partial<Report>) => {
+    try {
+      await api.post("/reports", report);
+    } catch (err) {}
   };
 
-  const markNotificationRead = (id: string) =>
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const getNotificationsForUser = (userId: string) => notifications;
 
-  const markAllNotificationsRead = (userId: string) =>
-    setNotifications((prev) =>
-      prev.map((n) => (n.userId === userId ? { ...n, read: true } : n))
-    );
-
-  const sendChatMessage = (msg: Omit<ChatMessage, "id">) => {
-    const newMsg: ChatMessage = { ...msg, id: `chat-${Date.now()}` };
-    setChatMessages((prev) => [...prev, newMsg]);
-  };
-
-  const addReport = (report: Omit<Report, "id">) => {
-    const newReport: Report = { ...report, id: `report-${Date.now()}` };
-    setReports((prev) => [...prev, newReport]);
-  };
-
-  const resolveReport = (id: string) =>
-    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status: "resolved" } : r)));
-
-  const getNotificationsForUser = (userId: string) =>
-    notifications.filter((n) => n.userId === userId);
-
-  const getChatForUser = (userId: string, adminId: string) =>
-    chatMessages.filter(
+  const getChatForUser = (userId: string, otherId: string) => {
+    return chatMessages.filter(
       (m) =>
-        (m.fromId === userId && m.toId === adminId) ||
-        (m.fromId === adminId && m.toId === userId)
+        (m.fromId === userId && m.toId === otherId) ||
+        (m.fromId === otherId && m.toId === userId)
     );
-
-  const incrementViews = (roomId: string) =>
-    setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, views: r.views + 1 } : r)));
+  };
+  
+  const incrementViews = async (roomId: string) => {
+    await api.put(`/rooms/${roomId}/views`).catch(() => {});
+  };
 
   return (
     <AppContext.Provider
@@ -165,19 +298,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateRoom,
         approveRoom,
         rejectRoom,
+        updateRoomStatus,
         toggleFavorite,
         addReview,
         approveReview,
         rejectReview,
-        addNotification,
+        resolveReport,
+        addReport,
+        loadReports,
         markNotificationRead,
         markAllNotificationsRead,
+        deleteNotification,
         sendChatMessage,
-        addReport,
-        resolveReport,
         getNotificationsForUser,
         getChatForUser,
         incrementViews,
+        loadRooms,
+        loadChatMessages,
+        conversations,
+        activeChatUserId,
+        setActiveChatUserId
       }}
     >
       {children}
