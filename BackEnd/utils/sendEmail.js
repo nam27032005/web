@@ -8,7 +8,7 @@ const sendEmail = async (options) => {
     // Dùng Gmail thật với cấu hình SMTP trực tiếp
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
+      port: 587,
       secure: true, // dùng SSL
       auth: {
         user: process.env.GMAIL_USER,
