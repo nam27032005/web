@@ -1,115 +1,148 @@
 # 7 Trọ - Nền tảng Kết nối Nhà trọ Thông minh 🏠🚀
 
-Dự án **7 Trọ** là một giải pháp PropTech (Công nghệ Bất động sản) toàn diện, giúp kết nối người đi thuê và chủ nhà trọ một cách minh bạch, an toàn và hiệu quả. Hệ thống hỗ trợ quản lý bài đăng, duyệt tin tự động/thủ công, trò chuyện trực tiếp và thông báo thời gian thực.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![React Version](https://img.shields.io/badge/react-18.3.1-blue)](https://reactjs.org/)
+
+Dự án **7 Trọ** là một nền tảng PropTech (Công nghệ Bất động sản) hiện đại, giúp kết nối người đi thuê và chủ nhà trọ một cách minh bạch, an toàn và hiệu quả. Hệ thống được thiết kế với trải nghiệm người dùng cao cấp, hỗ trợ quản lý bài đăng, duyệt tin, trò chuyện trực tiếp và thông báo thời gian thực.
 
 ---
 
-## ✨ Tính năng nổi bật
+## ✨ Tính năng chính
 
-### 👤 Đối với Người thuê (Renter)
-- **Tìm kiếm thông minh**: Lọc theo khu vực (Tỉnh/Thành, Quận/Huyện), loại phòng, mức giá và tiện ích (Điều hòa, Ban công...).
-- **Yêu thích & Lưu trữ**: Lưu lại các phòng ưng ý để xem lại sau.
-- **Đánh giá & Phản hồi**: Xem các đánh giá từ người thuê trước để có quyết định đúng đắn.
-- **Báo cáo vi phạm**: Gửi báo cáo về các bài đăng không trung thực để bảo vệ cộng đồng.
+### 👤 Cho Người thuê (Renter)
+*   **Tìm kiếm & Lọc nâng cao**: Tìm phòng theo Tỉnh/Thành, Quận/Huyện, khoảng giá, diện tích và các tiện ích (Điều hòa, máy giặt, ban công...).
+*   **Chi tiết phòng trọ**: Xem thông tin chi tiết, hình ảnh chất lượng cao, bản đồ vị trí và thông tin chủ nhà.
+*   **Yêu thích (Favorites)**: Lưu trữ các phòng trọ ưng ý vào danh sách cá nhân.
+*   **Đánh giá & Bình luận**: Gửi nhận xét và số sao cho phòng trọ sau khi trải nghiệm.
+*   **Báo cáo vi phạm (Report)**: Gửi phản hồi về các bài đăng sai sự thật hoặc lừa đảo.
+*   **Quên mật khẩu**: Khôi phục tài khoản qua mã OTP gửi tới Email.
 
-### 🏠 Đối với Chủ nhà (Owner)
-- **Đăng tin nhanh chóng**: Giao diện đăng tin hiện đại với đầy đủ thông tin chi tiết.
-- **Dashboard quản lý**: Theo dõi lượt xem, lượt yêu thích và trạng thái các bài đăng.
-- **Hỗ trợ trực tiếp**: Chat trực tiếp với Admin để giải quyết các vấn đề về bài đăng.
+### 🏠 Cho Chủ nhà (Owner)
+*   **Đăng tin hiện đại**: Giao diện đăng bài 1 trang (Single Page Form) tích hợp đủ thông tin: địa chỉ, tiện ích, nội thất, giá điện/nước.
+*   **Dashboard quản lý**: Theo dõi số lượng lượt xem (Views), lượt yêu thích (Favorites) và trạng thái duyệt tin.
+*   **Xác minh danh tính**: Cung cấp CCCD và địa chỉ để được Admin gắn dấu "Xác minh", tăng tin cậy.
+*   **Chat trực tiếp**: Trò chuyện với Admin để được hỗ trợ về bài đăng.
 
-### 🛡️ Đối với Quản trị viên (Admin)
-- **Kiểm duyệt bài đăng**: Hệ thống phê duyệt/từ chối bài đăng trực quan.
-- **Quản lý người dùng**: Xác minh danh tính chủ nhà để tăng độ uy tín.
-- **Thống kê chuyên sâu**: Biểu đồ phân tích xu hướng thị trường, loại phòng phổ biến.
-- **Xử lý vi phạm**: Quản lý báo cáo và xử lý các bài đăng vi phạm.
+### 🛡️ Cho Quản trị viên (Admin)
+*   **Kiểm duyệt tin đăng**: Hệ thống phê duyệt hoặc từ chối bài đăng trực quan (với lý do cụ thể).
+*   **Thống kê (Analytics)**: Biểu đồ (Recharts) theo dõi số lượng người dùng mới, bài đăng mới và doanh thu (nếu có).
+*   **Quản lý người dùng**: Khóa/mở khóa tài khoản, xác minh danh tính chủ nhà.
+*   **Xử lý báo cáo**: Xem các báo cáo từ người thuê và ra quyết định ẩn bài đăng vi phạm.
 
 ---
 
 ## 🛠️ Công nghệ sử dụng (Tech Stack)
 
-### Backend (API)
-- **Node.js & Express.js**: Framework xử lý logic server mạnh mẽ.
-- **MongoDB & Mongoose**: Cơ sở dữ liệu NoSQL linh hoạt, hiệu suất cao.
-- **JWT (JSON Web Token)**: Xác thực và phân quyền đa cấp.
-- **Nodemailer**: Hệ thống gửi email OTP và thông báo.
-- **Swagger**: Tài liệu API tự động tại `/api-docs`.
+### Backend
+*   **Node.js & Express**: Xử lý logic và API.
+*   **MongoDB & Mongoose**: Cơ sở dữ liệu NoSQL linh hoạt.
+*   **JWT & Bcrypt**: Bảo mật xác thực và mã hóa mật khẩu.
+*   **Nodemailer**: Gửi email thông báo và OTP (Gmail SMTP).
+*   **Swagger**: Tài liệu API tự động (`/api-docs`).
 
-### Frontend (UI/UX)
-- **React 18 & Vite**: Framework xây dựng giao diện tốc độ cao.
-- **TailwindCSS**: CSS Framework giúp UI hiện đại, responsive hoàn toàn.
-- **Lucide React**: Thư viện icon đồng bộ, sắc nét.
-- **React Router 7**: Quản lý điều hướng trang chuyên nghiệp.
-- **Recharts**: Biểu đồ thống kê trực quan cho Admin.
+### Frontend
+*   **React 18 & Vite**: Hiệu suất cao, tải nhanh.
+*   **TailwindCSS & Lucide-react**: Thiết kế hiện đại, responsive hoàn toàn.
+*   **Framer Motion**: Các hiệu ứng chuyển cảnh mượt mà.
+*   **Recharts**: Hiển thị số liệu thống kê cho Admin.
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt & Phát triển
+## 🚀 Hướng dẫn Chạy Local (Local Development)
 
 ### 1. Yêu cầu hệ thống
-- **Node.js** >= 18
-- **MongoDB** (Local hoặc Atlas)
+*   **Node.js**: Phiên bản 18.x trở lên.
+*   **MongoDB**: Local MongoDB Community Server hoặc MongoDB Atlas (Cloud).
+*   **Git**: Để quản lý mã nguồn.
 
-### 2. Cấu hình biến môi trường
-Tạo file `.env` trong thư mục `/BackEnd`:
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/easyaccomod
-JWT_SECRET=your_secret_key
-CLIENT_URL=http://localhost:5173
-GMAIL_USER=your_email@gmail.com
-GMAIL_APP_PASSWORD=your_app_password
-```
+### 2. Cài đặt trên các Hệ điều hành
 
-### 3. Khởi chạy
-Mở 2 terminal song song:
-
-**Terminal 1 (Backend):**
+#### 🐧 Linux & 🍎 macOS
 ```bash
+# Clone dự án
+git clone https://github.com/nam27032005/web.git
+cd web
+
+# Cài đặt Backend
 cd BackEnd
 npm install
-npm run dev
+cp .env.example .env # Sau đó sửa file .env
+
+# Cài đặt Frontend
+cd ../FrontEnd
+npm install
 ```
 
-**Terminal 2 (Frontend):**
-```bash
-cd FrontEnd
+#### 🪟 Windows (Powershell)
+```powershell
+# Clone dự án
+git clone https://github.com/nam27032005/web.git
+cd web
+
+# Cài đặt Backend
+cd BackEnd
 npm install
-npm run dev
+copy .env.example .env # Sau đó sửa file .env
+
+# Cài đặt Frontend
+cd ..\FrontEnd
+npm install
 ```
-Truy cập: `http://localhost:5173`
+
+### 3. Cấu hình Biến môi trường (.env)
+Tạo file `.env` trong thư mục `BackEnd/` với các biến sau:
+| Biến | Ý nghĩa | Ví dụ |
+|---|---|---|
+| `PORT` | Cổng chạy Server | `5000` |
+| `MONGODB_URI` | Chuỗi kết nối DB | `mongodb://localhost:27017/7tro` |
+| `JWT_SECRET` | Khóa bảo mật Token | `your_secret_key` |
+| `GMAIL_USER` | Email gửi OTP | `example@gmail.com` |
+| `GMAIL_APP_PASSWORD` | Mật khẩu ứng dụng Gmail | `xxxx xxxx xxxx xxxx` |
+| `CLIENT_URL` | URL của Frontend | `http://localhost:5173` |
+
+### 4. Khởi chạy dự án
+Bạn cần mở 2 cửa sổ Terminal:
+
+*   **Terminal 1 (Backend):**
+    ```bash
+    cd BackEnd
+    npm run dev
+    ```
+*   **Terminal 2 (Frontend):**
+    ```bash
+    cd FrontEnd
+    npm run dev
+    ```
+*   **Tạo dữ liệu mẫu (Tùy chọn):** Nếu muốn có sẵn hàng trăm phòng trọ để test:
+    ```bash
+    cd BackEnd
+    npm run seed
+    ```
 
 ---
 
-## 🌍 Hướng dẫn Hosting Miễn phí (Free)
+## 📂 Cấu trúc thư mục (Folder Structure)
+```text
+.
+├── BackEnd/            # Mã nguồn server (Node.js/Express)
+│   ├── controllers/    # Xử lý logic API
+│   ├── models/         # Định nghĩa Schema MongoDB
+│   ├── routes/         # Khai báo các endpoint
+│   ├── utils/          # Các tiện ích (Gửi mail, Seeding)
+│   └── server.js       # File khởi tạo server
+├── FrontEnd/           # Mã nguồn giao diện (React/Vite)
+│   ├── src/
+│   │   ├── app/        # Pages, Context, Routes
+│   │   ├── components/ # Các UI Component dùng chung
+│   │   └── lib/        # Cấu hình API (Axios)
+└── README.md
+```
 
-Dự án có thể triển khai hoàn toàn miễn phí bằng cách kết hợp các dịch vụ sau:
+---
 
-### Bước 1: Hosting Database (MongoDB Atlas)
-1. Truy cập [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) và tạo tài khoản free.
-2. Tạo 1 Cluster mới (Shared Tier - FREE).
-3. Tại phần **Network Access**, thêm IP `0.0.0.0/0` (Allow Access from Anywhere).
-4. Lấy chuỗi **Connection String** để điền vào biến `MONGODB_URI`.
-
-### Bước 2: Hosting Backend (Render.com)
-1. Đẩy code Backend lên GitHub (Lưu ý `.gitignore` file `.env`).
-2. Truy cập [Render.com](https://render.com/), tạo **Web Service** mới và kết nối repo GitHub.
-3. Cấu hình:
-   - **Environment**: Node
-   - **Build Command**: `cd BackEnd && npm install`
-   - **Start Command**: `cd BackEnd && node server.js`
-4. Tại tab **Environment Variables**, thêm đầy đủ các biến từ file `.env`.
-5. Sau khi Deploy thành công, bạn sẽ nhận được một URL API (Ví dụ: `https://7tro-api.onrender.com`).
-
-### Bước 3: Hosting Frontend (Vercel)
-1. Truy cập [Vercel.com](https://vercel.com/) và kết nối repo GitHub.
-2. Cấu hình project:
-   - **Root Directory**: `FrontEnd`
-   - **Framework Preset**: Vite
-   - **Build Command**: `npm run build`
-   - **Environment Variables**: Thêm `VITE_API_BASE_URL` với giá trị là URL Backend vừa tạo ở Bước 2 (Lưu ý thêm `/api` vào cuối URL).
-3. Nhấn **Deploy**. Vercel sẽ cung cấp cho bạn tên miền miễn phí (Ví dụ: `https://7tro.vercel.app`).
-
-**Lưu ý quan trọng:** Sau khi có URL Frontend, hãy quay lại Render cập nhật biến `CLIENT_URL` trong Backend để tránh lỗi CORS.
+## 🛡️ Giấy phép (License)
+Dự án được phát hành dưới giấy phép **MIT**.
 
 ---
 
