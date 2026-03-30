@@ -119,6 +119,7 @@ Bạn cần mở 2 cửa sổ Terminal:
     cd BackEnd
     npm run seed
     ```
+    *(Admin mặc định: `admin@7tro.com` / `Admin@2026`)*
 
 ---
 

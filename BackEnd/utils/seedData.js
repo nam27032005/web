@@ -63,9 +63,14 @@ const generateSeed = async () => {
     ]);
     console.log('🗑️  Cleared existing data');
 
-    // 1. Tạo ADMIN
+    // 1. Tạo ADMIN (Duy nhất)
     await User.create({
-      role: 'admin', name: 'Nguyễn Admin', email: 'admin@7tro.vn', password: 'admin123', phone: '0901234567', verified: true
+      role: 'admin',
+      name: 'Quách Thành Nam',
+      email: 'quachthanhnam27032005@gmail.com',
+      password: '@Thanhnam2005',
+      phone: '0901234567',
+      verified: true
     });
 
     // 2. Tạo OWNERS
