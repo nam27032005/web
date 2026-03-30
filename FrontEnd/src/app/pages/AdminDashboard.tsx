@@ -29,6 +29,8 @@ import {
   POST_STATUS_LABELS,
   formatPrice,
   ROOM_TYPE_LABELS,
+  formatDate,
+  formatDateTime
 } from "../data/mockData";
 import {
   BarChart,
@@ -226,7 +228,7 @@ export function AdminDashboard() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{room.title}</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{room.ownerName} · {new Date(room.createdAt).toLocaleDateString("vi-VN")}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{room.ownerName} · {formatDate(room.createdAt)}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500">{room.address.full}</p>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${POST_STATUS_COLORS[room.postStatus]}`}>
@@ -418,7 +420,7 @@ export function AdminDashboard() {
                           </p>
                         )}
                         <p className="text-sm text-gray-600 dark:text-gray-400">{report.description}</p>
-                        <p className="text-xs text-gray-400 mt-1">{report.createdAt}</p>
+                        <p className="text-xs text-gray-400 mt-1">{formatDate(report.createdAt)}</p>
                       </div>
                       {report.status === "pending" && (
                         <button
@@ -561,7 +563,7 @@ export function AdminDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{notif.message}</p>
                       <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {new Date(notif.createdAt).toLocaleString("vi-VN")}
+                        {formatDateTime(notif.createdAt)}
                       </p>
                     </div>
                     <button

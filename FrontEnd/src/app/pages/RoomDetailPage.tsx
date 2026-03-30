@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
-import { ROOM_TYPE_LABELS, formatPrice, Review } from "../data/mockData";
+import { ROOM_TYPE_LABELS, formatPrice, Review, formatDate, formatDateTime } from "../data/mockData";
 
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -257,7 +257,7 @@ export function RoomDetailPage() {
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />Đăng ngày {room.createdAt}
+                  <Calendar className="w-4 h-4" />Đăng ngày {formatDate(room.createdAt)}
                 </span>
               </div>
             </div>
@@ -379,7 +379,7 @@ export function RoomDetailPage() {
                               <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`} />
                             ))}
                           </div>
-                          <span className="text-xs text-gray-400">{rev.createdAt}</span>
+                          <span className="text-xs text-gray-400">{formatDateTime(rev.createdAt)}</span>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{rev.comment}</p>
                       </div>
@@ -472,7 +472,7 @@ export function RoomDetailPage() {
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Thời hạn đăng</span>
-                  <span className="text-gray-900 dark:text-white font-medium">{room.expiresAt || "—"}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{formatDate(room.expiresAt)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Lượt xem</span>

@@ -32,6 +32,8 @@ import {
   Room,
   POST_STATUS_COLORS,
   POST_STATUS_LABELS,
+  formatDate,
+  formatDateTime
 } from "../data/mockData";
 import { CreateListingModal } from "./CreateListingModal";
 
@@ -39,14 +41,15 @@ type DashboardTab = "listings" | "create" | "stats" | "notifications";
 
 export function OwnerDashboard() {
   const { currentUser } = useAuth();
-  const { rooms, updateRoom, notifications, getNotificationsForUser, deleteNotification, markNotificationRead } =
+  const { rooms, updateRoom, loadRooms, notifications, getNotificationsForUser, deleteNotification, markNotificationRead } =
     useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DashboardTab>("listings");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-
-
+  useEffect(() => {
+    loadRooms();
+  }, [loadRooms]);
 
   if (!currentUser || currentUser.role !== "owner") {
     return (
@@ -59,7 +62,10 @@ export function OwnerDashboard() {
     );
   }
 
-  const myRooms = rooms.filter((r) => r.ownerId === currentUser.id);
+  const myRooms = rooms.filter((r) => {
+    const rOwnerId = typeof r.ownerId === "object" ? (r.ownerId as any)._id || (r.ownerId as any).id : r.ownerId;
+    return rOwnerId === currentUser.id || rOwnerId === currentUser._id;
+  });
   const myNotifs = getNotificationsForUser(currentUser.id);
   const unreadNotifs = myNotifs.filter((n) => !n.read).length;
 
@@ -222,7 +228,7 @@ export function OwnerDashboard() {
                           </span>
                           {room.expiresAt && (
                             <span className="flex items-center gap-0.5 text-xs text-gray-400">
-                              <Clock className="w-3 h-3" />Hết hạn: {room.expiresAt}
+                              <Clock className="w-3 h-3" />Hết hạn: {formatDate(room.expiresAt)}
                             </span>
                           )}
                         </div>
@@ -368,7 +374,7 @@ export function OwnerDashboard() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{notif.message}</p>
                         <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {new Date(notif.createdAt).toLocaleString("vi-VN")}
+                          {formatDateTime(notif.createdAt)}
                         </p>
                       </div>
                       <button

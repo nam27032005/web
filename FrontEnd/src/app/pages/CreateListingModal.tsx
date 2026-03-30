@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, CheckCircle, Upload, Plus, Minus } from "lucide-react";
 import { useApp } from "../context/AppContext";
-import { Room, RoomType, calcPostFee, formatPrice, POST_PRICING_RATES } from "../data/mockData";
+import { Room, RoomType, calcPostFee, formatPrice, POST_PRICING_RATES, formatDate } from "../data/mockData";
 
 interface CreateListingModalProps {
   onClose: () => void;
@@ -45,6 +45,7 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
     electricityRate: "",
     waterRate: "",
     amenities: [] as string[],
+    images: [] as string[],
     displayDuration: 1,
     displayDurationUnit: "month" as "week" | "month" | "quarter" | "year",
   });
@@ -60,6 +61,27 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
       amenities: prev.amenities.includes(a)
         ? prev.amenities.filter((x) => x !== a)
         : [...prev.amenities, a],
+    }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev) => ({
+          ...prev,
+          images: [...prev.images, reader.result as string],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
@@ -95,7 +117,7 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
       electricityRate: form.electricityRate ? Number(form.electricityRate) : undefined,
       waterRate: form.waterRate ? Number(form.waterRate) : undefined,
       amenities: form.amenities,
-      images: ROOM_IMAGES,
+      images: form.images.length > 0 ? form.images : ROOM_IMAGES,
       status: "available",
       postStatus: "pending",
       displayDuration: form.displayDuration,
@@ -328,17 +350,39 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
                     </div>
                   </div>
 
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Upload className="w-4 h-4 text-amber-600" />
-                      <p className="text-sm font-medium text-amber-700">Ảnh phòng trọ (tối thiểu 3 ảnh)</p>
+                  <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-emerald-600" />
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Ảnh phòng trọ (Tối thiểu 3 ảnh)</p>
+                      </div>
+                      <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">
+                        Thêm ảnh
+                        <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      </label>
                     </div>
-                    <p className="text-xs text-amber-600">Hệ thống sẽ sử dụng ảnh mẫu trong bản demo. Trong thực tế, bạn có thể tải ảnh lên.</p>
-                    <div className="flex gap-2 mt-2">
-                      {ROOM_IMAGES.slice(0, 3).map((img, i) => (
-                        <img key={i} src={img} alt="" className="w-16 h-12 object-cover rounded-lg border-2 border-emerald-300" />
-                      ))}
-                    </div>
+
+                    {form.images.length === 0 ? (
+                      <div className="border-2 border-dashed border-emerald-200 dark:border-emerald-800 rounded-xl py-8 flex flex-col items-center justify-center bg-white dark:bg-gray-800/50">
+                        <Upload className="w-8 h-8 text-emerald-300 mb-2" />
+                        <p className="text-xs text-gray-400">Chưa có ảnh nào được tải lên</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {form.images.map((img, i) => (
+                          <div key={i} className="relative group aspect-square">
+                            <img src={img} alt="" className="w-full h-full object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(i)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity translate-y-1 group-hover:translate-y-0"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

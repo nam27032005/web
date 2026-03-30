@@ -13,18 +13,12 @@ exports.getRooms = async (req, res, next) => {
       city, district, type, status,
       minPrice, maxPrice, hasAC, hasBalcony, q,
       page = 1, limit = 12, sort = '-createdAt',
+      postStatus, ownerId
     } = req.query;
 
-    let { postStatus, ownerId } = req.query;
-    // Admin mặc định thấy tất cả bài đăng nếu không lọc cụ thể, 
-    // Người dùng bình thường chỉ thấy bài 'approved'
-    if (!postStatus && (!req.user || req.user.role !== 'admin')) {
-      postStatus = 'approved';
-    }
-
     const filter = {};
-    if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
-    if (ownerId) filter.ownerId = ownerId;
+
+    // 1. Basic Filters
     if (city) filter['address.city'] = { $regex: city, $options: 'i' };
     if (district) filter['address.district'] = { $regex: district, $options: 'i' };
     if (type) filter.roomType = type;
@@ -37,6 +31,45 @@ exports.getRooms = async (req, res, next) => {
     if (hasAC === 'true') filter.hasAC = true;
     if (hasBalcony === 'true') filter.hasBalcony = true;
     if (q) filter.$text = { $search: q };
+
+    // 2. Visibility & Logic
+    if (!req.user || req.user.role !== 'admin') {
+      // Common user visibility
+      if (ownerId) {
+        // If ownerId is provided, check if it's the current user
+        if (req.user && req.user._id.toString() === ownerId) {
+          if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
+          filter.ownerId = ownerId;
+        } else {
+          // Others can only see approved
+          filter.ownerId = ownerId;
+          filter.postStatus = 'approved';
+        }
+      } else {
+        // Root list
+        if (postStatus && postStatus !== 'all') {
+          if (postStatus === 'approved') {
+            filter.postStatus = 'approved';
+          } else if (req.user) {
+            // Can see non-approved only for themselves
+            filter.postStatus = postStatus;
+            filter.ownerId = req.user._id;
+          } else {
+            filter.postStatus = 'approved';
+          }
+        } else {
+          if (req.user) {
+            filter.$or = [{ postStatus: 'approved' }, { ownerId: req.user._id }];
+          } else {
+            filter.postStatus = 'approved';
+          }
+        }
+      }
+    } else {
+      // Admin sees everything as requested
+      if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
+      if (ownerId) filter.ownerId = ownerId;
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
     const [rooms, total] = await Promise.all([
