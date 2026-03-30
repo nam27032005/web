@@ -93,3 +93,15 @@ exports.verifyOwner = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * GET /api/users/me/favorites – Lấy danh sách ID phòng yêu thích của tôi
+ */
+exports.getMyFavorites = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('favorites');
+    res.json({ success: true, favorites: user ? user.favorites : [] });
+  } catch (err) {
+    next(err);
+  }
+};

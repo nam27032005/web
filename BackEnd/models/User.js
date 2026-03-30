@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
     verified: { type: Boolean, default: false }, // owner: đã được admin xác nhận
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Room' }],
   },
   { timestamps: true }
 );

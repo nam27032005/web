@@ -32,6 +32,7 @@ interface AppContextType {
   getNotificationsForUser: (userId: string) => Notification[];
   getChatForUser: (userId: string, adminId: string) => ChatMessage[];
   loadRooms: () => Promise<void>;
+  loadReviews: () => Promise<void>;
   loadChatMessages: (withUserId?: string) => Promise<void>;
   incrementViews: (roomId: string) => void;
 }
@@ -117,9 +118,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadReviews();
   }, [loadRooms, loadReviews]);
 
+  const loadFavorites = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.get("/users/me/favorites");
+      if (res.data.success) {
+        setFavorites(res.data.favorites || []);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách yêu thích:", err);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated) {
       loadNotifications();
+      loadFavorites();
       // Initial chat load
       loadChatMessages();
       
@@ -135,8 +149,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       setNotifications([]);
       setChatMessages([]);
+      setFavorites([]);
     }
-  }, [isAuthenticated, loadNotifications, loadChatMessages]);
+  }, [isAuthenticated, loadNotifications, loadFavorites, loadChatMessages]);
 
   // --- API Handlers ---
   const addRoom = async (roomData: Partial<Room>) => {
@@ -177,11 +192,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleFavorite = async (roomId: string) => {
     if (!isAuthenticated) return;
     try {
-      const action = favorites.includes(roomId) ? "remove" : "add";
-      await api.post(`/rooms/${roomId}/favorite`, { action });
+      const isFav = favorites.includes(roomId);
+      const action = isFav ? "remove" : "add";
+      
+      // Cập nhật UI trước (Optimistic Update)
       setFavorites(prev => action === "add" ? [...prev, roomId] : prev.filter(id => id !== roomId));
-      loadRooms();
-    } catch (err) { }
+      
+      const res = await api.post(`/rooms/${roomId}/favorite`, { action });
+      if (res.data.success) {
+        // Cập nhật lại số lượng favorites trong danh sách phòng
+        setRooms(prev => prev.map(r => r.id === roomId ? { ...r, favorites: res.data.favorites } : r));
+      }
+    } catch (err) {
+      // Rollback nếu lỗi
+      loadFavorites();
+    }
   };
 
   const addReview = async (review: Partial<Review>) => {
@@ -314,6 +339,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getChatForUser,
         incrementViews,
         loadRooms,
+        loadReviews,
         loadChatMessages,
         conversations,
         activeChatUserId,

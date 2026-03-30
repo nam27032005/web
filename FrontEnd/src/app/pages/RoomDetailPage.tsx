@@ -33,7 +33,7 @@ import { ROOM_TYPE_LABELS, formatPrice, Review } from "../data/mockData";
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { rooms, reviews, favorites, toggleFavorite, addReview, addReport, incrementViews } = useApp();
+  const { rooms, reviews, favorites, toggleFavorite, addReview, loadReviews, addReport, incrementViews } = useApp();
   const { currentUser, isAuthenticated } = useAuth();
 
   const room = rooms.find((r) => r.id === id);
@@ -92,23 +92,23 @@ export function RoomDetailPage() {
     setReportDone(true);
   };
 
-  const handleReview = (e: React.FormEvent) => {
+  const handleReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewComment.trim() || !currentUser) return;
-    const newReview: Review = {
-      id: `rev-${Date.now()}`,
-      roomId: room.id,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userAvatar: currentUser.avatar,
+    
+    // Gửi lên server (Server sẽ tự gán userId, userName, avatar từ Token)
+    const reviewData = {
+      roomId: room._id || room.id,
       rating: reviewRating,
       comment: reviewComment,
-      status: "pending",
-      createdAt: new Date().toISOString().split("T")[0],
     };
-    addReview(newReview);
+    
+    await addReview(reviewData);
     setReviewDone(true);
     setShowReviewForm(false);
+    setReviewComment("");
+    // Tự động load lại danh sách sau khi gửi thành công
+    loadReviews(); 
   };
 
   const prevImg = () => setActiveImg((v) => (v === 0 ? room.images.length - 1 : v - 1));

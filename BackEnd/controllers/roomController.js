@@ -255,13 +255,25 @@ exports.incrementViews = async (req, res, next) => {
 exports.toggleFavorite = async (req, res, next) => {
   try {
     const { action } = req.body; // 'add' or 'remove'
-    const inc = action === 'add' ? 1 : -1;
-    const room = await Room.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { favorites: inc } },
-      { new: true }
-    );
+    const roomId = req.params.id;
+    const userId = req.user._id;
+
+    const room = await Room.findById(roomId);
     if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
+
+    if (action === 'add') {
+      // Thêm vào mảng favorites của User (cơ chế $addToSet để không trùng)
+      await User.findByIdAndUpdate(userId, { $addToSet: { favorites: roomId } });
+      // Tăng counter trong Room
+      room.favorites += 1;
+    } else {
+      // Xóa khỏi mảng favorites của User
+      await User.findByIdAndUpdate(userId, { $pull: { favorites: roomId } });
+      // Giảm counter trong Room (không để âm)
+      room.favorites = Math.max(0, room.favorites - 1);
+    }
+
+    await room.save();
     res.json({ success: true, favorites: room.favorites });
   } catch (err) {
     next(err);
