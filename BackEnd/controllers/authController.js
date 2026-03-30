@@ -27,18 +27,16 @@ exports.sendRegisterOtp = async (req, res, next) => {
     await Otp.deleteMany({ email }); // xoa cac OTP cu
     await Otp.create({ email, otp: otpCode });
 
-    // Send email
-    try {
-      await sendEmail({
-        email,
-        subject: 'Mã xác nhận đăng ký tài khoản 7 Trọ',
-        html: `<h2>Xin chào ${name || 'bạn'},</h2><p>Mã xác nhận đăng ký của bạn là: <strong>${otpCode}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
-      });
-      res.json({ success: true, message: 'Đã gửi mã xác nhận đến email của bạn.' });
-    } catch (err) {
-      await Otp.deleteMany({ email });
-      res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi gửi email, vui lòng thử lại sau.' });
-    }
+    // Send email (chạy ngầm để không làm treo giao diện)
+    sendEmail({
+      email,
+      subject: 'Mã xác nhận đăng ký tài khoản 7 Trọ',
+      html: `<h2>Xin chào ${name || 'bạn'},</h2><p>Mã xác nhận đăng ký của bạn là: <strong>${otpCode}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
+    }).catch(err => {
+      console.error(`❌ Lỗi gửi email OTP cho ${email}:`, err.message);
+    });
+
+    res.json({ success: true, message: 'Đã gửi mã xác nhận đến email của bạn.' });
   } catch (err) {
     next(err);
   }
