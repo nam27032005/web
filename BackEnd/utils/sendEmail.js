@@ -5,16 +5,18 @@ const sendEmail = async (options) => {
   let transporter;
 
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-    // Dùng Gmail thật với cấu hình SMTP trực tiếp
-    transporter = nodemailer.createTransport({
+      transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
-      secure: false, // dùng SSL
+      secure: false, // dùng STARTTLS
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
       },
-      pool: true, // dùng pool để tối ưu kết nối
+      // THÊM DÒNG NÀY ĐỂ FIX LỖI ENETUNREACH
+      dnsFamily: 4, 
+      
+      pool: true,
       maxConnections: 5,
       maxMessages: 100,
     });
