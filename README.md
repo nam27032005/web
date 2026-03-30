@@ -141,9 +141,3 @@ Bạn cần mở 2 cửa sổ Terminal:
 
 ---
 
-## 🛡️ Giấy phép (License)
-Dự án được phát hành dưới giấy phép **MIT**.
-
----
-
-*© 2026 7 Trọ Team. Phát triển với ❤️ vì cộng đồng tìm trọ văn minh.*
