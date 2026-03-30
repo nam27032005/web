@@ -84,8 +84,12 @@ exports.createRoom = async (req, res, next) => {
     const { displayDuration = 1, displayDurationUnit = 'month' } = req.body;
     const postFee = displayDuration * (feeMap[displayDurationUnit] || 200000);
 
+    const roomData = { ...req.body };
+    delete roomData.id;
+    delete roomData._id;
+
     const room = await Room.create({
-      ...req.body,
+      ...roomData,
       ownerId: owner._id,
       ownerName: owner.name,
       ownerPhone: owner.phone,

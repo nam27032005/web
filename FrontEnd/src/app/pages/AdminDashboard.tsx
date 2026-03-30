@@ -44,7 +44,7 @@ import {
   Legend,
 } from "recharts";
 
-type AdminTab = "posts" | "users" | "stats" | "chat" | "notifications" | "reports";
+type AdminTab = "posts" | "users" | "stats" | "notifications" | "reports";
 
 export function AdminDashboard() {
   const { currentUser } = useAuth();
@@ -52,29 +52,22 @@ export function AdminDashboard() {
     rooms,
     reviews,
     notifications,
-    chatMessages,
-    conversations,
-    setActiveChatUserId,
     reports,
     approveRoom,
     rejectRoom,
     approveReview,
     rejectReview,
     resolveReport,
-    sendChatMessage,
     getNotificationsForUser,
     markNotificationRead,
     deleteNotification,
   } = useApp();
 
-  const { loadChatMessages, loadReports } = useApp();
+  const { loadReports } = useApp();
   const [activeTab, setActiveTab] = useState<AdminTab>("posts");
-  const [selectedOwner, setSelectedOwner] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [chatMsg, setChatMsg] = useState("");
   const [owners, setOwners] = useState<any[]>([]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Fetch users (owners) for admin
@@ -92,23 +85,12 @@ export function AdminDashboard() {
     }
   }, [currentUser, loadReports]);
 
-  // Fetch chat messages when owner selected
+  // Fetch reports when tab selected
   useEffect(() => {
-    if (activeTab === "chat" && selectedOwner) {
-      loadChatMessages(selectedOwner);
-    } else if (activeTab === "reports") {
+    if (activeTab === "reports") {
       loadReports();
-    } else if (activeTab !== "chat") {
-      setActiveChatUserId(null);
     }
-  }, [activeTab, selectedOwner, loadChatMessages, setActiveChatUserId, loadReports]);
-
-  useEffect(() => {
-    // Only scroll if we are in chat tab and there is a selected owner
-    if (activeTab === "chat" && selectedOwner && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [chatMessages, activeTab, selectedOwner]);
+  }, [activeTab, loadReports]);
 
   if (!currentUser || currentUser.role !== "admin") {
     return (
@@ -125,26 +107,7 @@ export function AdminDashboard() {
   const pendingRooms = rooms.filter((r) => r.postStatus === "pending");
   const pendingReviews = reviews.filter((r) => r.status === "pending");
 
-  // Chat with selected owner
-  const ownerChats = selectedOwner
-    ? chatMessages.filter(
-        (m) =>
-          (m.fromId === selectedOwner && m.toId === currentUser.id) ||
-          (m.fromId === currentUser._id && m.toId === selectedOwner) ||
-          (typeof m.fromId === 'object' && (m.fromId as any)._id === selectedOwner) ||
-          (typeof m.toId === 'object' && (m.toId as any)._id === selectedOwner)
-      )
-    : [];
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatMsg.trim() || !selectedOwner) return;
-    sendChatMessage({
-      toId: selectedOwner,
-      message: chatMsg,
-    });
-    setChatMsg("");
-  };
 
   const handleReject = async (roomId: string) => {
     if (!rejectReason.trim()) return;
@@ -189,7 +152,7 @@ export function AdminDashboard() {
     { id: "users", label: "Tài khoản chủ nhà", icon: <Users className="w-4 h-4" /> },
     { id: "reports", label: "Báo cáo vi phạm", icon: <Flag className="w-4 h-4" />, badge: reports.filter(r => r.status === "pending").length },
     { id: "stats", label: "Thống kê", icon: <BarChart2 className="w-4 h-4" /> },
-    { id: "chat", label: "Chat", icon: <MessageCircle className="w-4 h-4" /> },
+
     { id: "notifications", label: "Thông báo", icon: <Bell className="w-4 h-4" />, badge: adminNotifs.filter(n => !n.read).length },
   ];
 
@@ -413,12 +376,12 @@ export function AdminDashboard() {
                         <CheckCircle className="w-3 h-3" />Xác nhận
                       </button>
                     )}
-                    <button
-                      onClick={() => { setSelectedOwner(owner._id || owner.id); setActiveTab("chat"); }}
+                    <Link
+                      to={`/users/${owner._id || owner.id}`}
                       className="flex items-center gap-1 text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50"
                     >
-                      <MessageCircle className="w-3 h-3" />Chat
-                    </button>
+                      <Users className="w-3 h-3" />Chi tiết
+                    </Link>
                   </div>
                 </div>
               );
@@ -567,163 +530,7 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* Chat Tab (Admin View) */}
-        {activeTab === "chat" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
-            {/* Owner List (Left Sidebar) */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm flex flex-col">
-              <div className="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 backdrop-blur-sm">
-                <p className="font-bold text-gray-900 dark:text-white text-sm">Cuộc trò chuyện</p>
-              </div>
-              <div className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-700">
-                {owners.length === 0 ? (
-                  <div className="p-10 text-center opacity-30">
-                    <Users className="w-10 h-10 mx-auto mb-2" />
-                    <p className="text-xs font-medium">Chưa có chủ nhà nào</p>
-                  </div>
-                ) : (
-                  owners.map((owner) => {
-                    const ownerId = owner._id || owner.id;
-                    const lastMsg = conversations.find(c => 
-                      (typeof c.fromId === 'object' ? (c.fromId as any)._id : c.fromId) === ownerId || 
-                      (typeof c.toId === 'object' ? (c.toId as any)._id : c.toId) === ownerId
-                    );
-                    const isActive = selectedOwner === ownerId;
-                    
-                    return (
-                      <button
-                        key={ownerId}
-                        onClick={() => setSelectedOwner(ownerId)}
-                        className={`w-full p-4 flex items-center gap-3 transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 group ${isActive ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
-                      >
-                        <div className="relative flex-shrink-0">
-                          <img src={owner.avatar} alt="" className="w-11 h-11 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm" />
-                          <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-gray-800 rounded-full ${owner.verified ? "bg-green-500" : "bg-gray-300"}`}></span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline mb-0.5">
-                            <p className={`text-sm font-bold truncate ${isActive ? "text-emerald-700 dark:text-emerald-400" : "text-gray-900 dark:text-white"}`}>
-                              {owner.name}
-                            </p>
-                            {lastMsg && (
-                              <span className="text-[10px] text-gray-400 font-medium">
-                                {new Date(lastMsg.createdAt || Date.now()).toLocaleDateString("vi-VN", { month: "numeric", day: "numeric" })}
-                              </span>
-                            )}
-                          </div>
-                          {lastMsg ? (
-                            <p className="text-xs text-gray-500 line-clamp-1 opacity-70 group-hover:opacity-100 transition-opacity">{lastMsg.message}</p>
-                          ) : (
-                            <p className="text-[10px] text-gray-400 font-medium italic">Chưa có tin nhắn</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
 
-            {/* Chat Window (Right Side) */}
-            <div className="md:col-span-2 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 flex flex-col shadow-sm overflow-hidden">
-              {selectedOwner ? (
-                <>
-                  {/* Chat User Header */}
-                  <div className="p-4 border-b border-gray-50 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md flex items-center justify-between sticky top-0 z-10 transition-colors">
-                    {(() => {
-                      const owner = owners.find((u) => (u._id || u.id) === selectedOwner);
-                      return (
-                        <div className="flex items-center gap-3">
-                          <img src={owner?.avatar} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
-                          <div>
-                            <p className="font-bold text-gray-900 dark:text-white text-sm">{owner?.name}</p>
-                            <div className="flex items-center gap-2">
-                              <p className="text-[10px] font-medium text-gray-400 flex items-center gap-1">
-                                <MapPin className="w-3 h-3" /> {owner?.address || "Chưa cập nhật địa chỉ"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Messages Feed */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30 dark:bg-gray-900/10 transition-colors">
-                    {ownerChats.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-30">
-                        <MessageCircle className="w-12 h-12 text-gray-300" />
-                        <p className="text-sm font-medium dark:text-gray-400">Bắt đầu trò chuyện với chủ nhà</p>
-                      </div>
-                    )}
-                    {ownerChats.map((msg, idx) => {
-                      const fromIdStr = typeof msg.fromId === 'object' ? (msg.fromId as any)._id : msg.fromId;
-                      const isAdmin = fromIdStr === currentUser._id || fromIdStr === currentUser.id;
-                      const owner = owners.find(u => (u._id || u.id) === selectedOwner);
-                      const isFirstInGroup = idx === 0 || (typeof ownerChats[idx-1].fromId === 'object' ? (ownerChats[idx-1].fromId as any)._id : ownerChats[idx-1].fromId) !== fromIdStr;
-                      const time = msg.createdAt ? new Date(msg.createdAt) : new Date();
-
-                      return (
-                        <div key={msg._id || (msg as any).id} className={`flex items-end gap-2 ${isAdmin ? "justify-end" : "justify-start"}`}>
-                          {!isAdmin && isFirstInGroup && (
-                            <img src={owner?.avatar} alt="" className="w-7 h-7 rounded-full object-cover mb-1 border border-white dark:border-gray-700 shadow-sm" />
-                          )}
-                          {!isAdmin && !isFirstInGroup && <div className="w-7"></div>}
-                          
-                          <div className={`group relative max-w-[75%] px-4 py-2.5 shadow-sm transition-all hover:shadow-md ${
-                            isAdmin 
-                              ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-2xl rounded-tr-none" 
-                              : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tl-none border border-gray-100 dark:border-gray-600"
-                          }`}>
-                            <p className="text-sm leading-relaxed">{msg.message}</p>
-                            <div className={`text-[9px] mt-1.5 font-medium opacity-0 group-hover:opacity-60 transition-opacity absolute ${isAdmin ? "right-0 -bottom-4 text-gray-500" : "left-0 -bottom-4 text-gray-500"}`}>
-                              {time.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  {/* Message Input */}
-                  <form onSubmit={handleSendChat} className="p-4 bg-white dark:bg-gray-800 border-t border-gray-50 dark:border-gray-700 flex items-center gap-3 transition-colors">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={chatMsg}
-                        onChange={(e) => setChatMsg(e.target.value)}
-                        placeholder="Viết phản hồi..."
-                        className="w-full bg-gray-100 dark:bg-gray-900 dark:text-white border-transparent rounded-2xl px-5 py-3 text-sm focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none shadow-inner"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={!chatMsg.trim()}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                        chatMsg.trim() 
-                          ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 scale-100 hover:scale-110 active:scale-95" 
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-400 scale-90"
-                      }`}
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-10 space-y-4 opacity-50">
-                  <div className="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-10 h-10 text-gray-300" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 dark:text-white">Tin nhắn hệ thống</p>
-                    <p className="text-sm text-gray-500 max-w-[250px] mx-auto mt-1">Chọn một chủ nhà trọ từ danh sách bên trái để bắt đầu hỗ trợ hoặc trao đổi.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Notifications */}
         {activeTab === "notifications" && (

@@ -68,7 +68,6 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRoom: Partial<Room> = {
-      id: `room-${Date.now()}`,
       ownerId,
       ownerName,
       ownerPhone,
@@ -104,7 +103,6 @@ export function CreateListingModal({ onClose, ownerId, ownerName, ownerPhone }: 
       postFee,
       views: 0,
       favorites: 0,
-      createdAt: new Date().toISOString().split("T")[0],
     };
     const res = await addRoom(newRoom);
     if (res.success) {

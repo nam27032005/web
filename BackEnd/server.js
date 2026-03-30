@@ -12,7 +12,6 @@ const userRoutes = require('./routes/users');
 const roomRoutes = require('./routes/rooms');
 const reviewRoutes = require('./routes/reviews');
 const notificationRoutes = require('./routes/notifications');
-const chatRoutes = require('./routes/chat');
 const reportRoutes = require('./routes/reports');
 
 // ── App setup ────────────────────────────────────────
@@ -57,7 +56,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/chat', chatRoutes);
 app.use('/api/reports', reportRoutes);
 
 // ── Swagger UI Docs ──────────────────────────────────

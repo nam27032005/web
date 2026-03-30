@@ -35,52 +35,18 @@ import {
 } from "../data/mockData";
 import { CreateListingModal } from "./CreateListingModal";
 
-type DashboardTab = "listings" | "create" | "stats" | "chat" | "notifications";
+type DashboardTab = "listings" | "create" | "stats" | "notifications";
 
 export function OwnerDashboard() {
   const { currentUser } = useAuth();
-  const { loadChatMessages, rooms, updateRoom, notifications, getNotificationsForUser, chatMessages, sendChatMessage, setActiveChatUserId, deleteNotification, markNotificationRead } =
+  const { rooms, updateRoom, notifications, getNotificationsForUser, deleteNotification, markNotificationRead } =
     useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DashboardTab>("listings");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [chatMsg, setChatMsg] = useState("");
-  const [adminId, setAdminId] = useState<string | null>(null); // Fetch Admin ID dynamically
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch real admin ID (backup if needed)
-  useEffect(() => {
-    const fetchAdmin = async () => {
-      try {
-        const res = await api.get("/users?role=admin");
-        if (res.data.success && res.data.users.length > 0) {
-          // Identify the specific admin by ID if possible, otherwise keep the default
-          const specificAdmin = res.data.users.find((u: any) => (u._id || u.id) === "69c92c048c12a9bff8a1fa47");
-          if (specificAdmin) {
-            setAdminId(specificAdmin._id || specificAdmin.id);
-          }
-        }
-      } catch (err) {}
-    };
-    if (currentUser && currentUser.role === "owner") {
-      fetchAdmin();
-    }
-  }, [currentUser]);
 
-  // Fetch chat messages when tab selected
-  useEffect(() => {
-    if (activeTab === "chat" && adminId) {
-      loadChatMessages(adminId);
-    } else if (activeTab !== "chat") {
-      setActiveChatUserId(null);
-    }
-  }, [activeTab, adminId, loadChatMessages, setActiveChatUserId]);
 
-  useEffect(() => {
-    if (activeTab === "chat" && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [chatMessages, activeTab]);
 
   if (!currentUser || currentUser.role !== "owner") {
     return (
@@ -97,21 +63,7 @@ export function OwnerDashboard() {
   const myNotifs = getNotificationsForUser(currentUser.id);
   const unreadNotifs = myNotifs.filter((n) => !n.read).length;
 
-  // Chat messages with admin
-  const myChats = chatMessages.filter((m) => {
-    const fromId = typeof m.fromId === 'object' ? (m.fromId as any)._id : m.fromId;
-    const toId = typeof m.toId === 'object' ? (m.toId as any)._id : m.toId;
-    const currentId = currentUser._id || currentUser.id;
-    return (
-      (fromId === currentId && toId === adminId) ||
-      (fromId === adminId && toId === currentId)
-    );
-  });
 
-  const adminProfile = {
-    name: "Admin 7 Trọ",
-    avatar: "https://images.unsplash.com/photo-1765648763932-43a3e2f8f35c?w=200&h=200&fit=crop",
-  };
 
   const stats = {
     total: myRooms.length,
@@ -128,20 +80,12 @@ export function OwnerDashboard() {
     });
   };
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatMsg.trim() || !adminId) return;
-    sendChatMessage({
-      toId: adminId,
-      message: chatMsg,
-    });
-    setChatMsg("");
-  };
+
 
   const TABS = [
     { id: "listings" as DashboardTab, label: "Bài đăng", icon: <Home className="w-4 h-4" /> },
     { id: "stats" as DashboardTab, label: "Thống kê", icon: <BarChart2 className="w-4 h-4" /> },
-    { id: "chat" as DashboardTab, label: "Chat Admin", icon: <MessageCircle className="w-4 h-4" /> },
+
     {
       id: "notifications" as DashboardTab,
       label: "Thông báo",
@@ -394,86 +338,7 @@ export function OwnerDashboard() {
             </div>
           )}
 
-          {/* Chat Tab (Messenger Style) */}
-          {activeTab === "chat" && (
-            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 flex flex-col shadow-sm overflow-hidden h-[600px] max-h-[70vh]">
-              {/* Chat Header */}
-              <div className="p-4 border-b border-gray-50 dark:border-gray-700 flex items-center justify-between bg-white/50 dark:bg-gray-800/50 backdrop-blur-md sticky top-0 z-10 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <img src={adminProfile.avatar} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm" />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-700 rounded-full"></span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm">{adminProfile.name}</p>
-                    <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider">Đang trực tuyến</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30 dark:bg-gray-900/10 transition-colors">
-                {myChats.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-40">
-                    <MessageCircle className="w-12 h-12 text-gray-300" />
-                    <p className="text-sm font-medium dark:text-gray-400">Bắt đầu cuộc trò chuyện với Admin</p>
-                  </div>
-                )}
-                {myChats.map((msg, idx) => {
-                  const currentId = currentUser._id || currentUser.id;
-                  const fromIdStr = typeof msg.fromId === 'object' ? (msg.fromId as any)._id : msg.fromId;
-                  const isMe = fromIdStr === currentId;
-                  const isFirstInGroup = idx === 0 || (typeof myChats[idx-1].fromId === 'object' ? (myChats[idx-1].fromId as any)._id : myChats[idx-1].fromId) !== fromIdStr;
-                  const time = msg.createdAt ? new Date(msg.createdAt) : new Date();
-
-                  return (
-                    <div key={msg._id || (msg as any).id} className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-                      {!isMe && isFirstInGroup && (
-                        <img src={adminProfile.avatar} alt="" className="w-7 h-7 rounded-full object-cover mb-1 border border-white dark:border-gray-700 shadow-sm" />
-                      )}
-                      {!isMe && !isFirstInGroup && <div className="w-7"></div>}
-                      
-                      <div className={`group relative max-w-[75%] px-4 py-2.5 shadow-sm transition-all hover:shadow-md ${
-                        isMe 
-                          ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-2xl rounded-tr-none" 
-                          : "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tl-none border border-gray-100 dark:border-gray-600"
-                      }`}>
-                        <p className="text-sm leading-relaxed">{msg.message}</p>
-                        <div className={`text-[9px] mt-1.5 font-medium opacity-0 group-hover:opacity-60 transition-opacity absolute ${isMe ? "right-0 -bottom-4 text-gray-500" : "left-0 -bottom-4 text-gray-500"}`}>
-                          {time.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat Input */}
-              <form onSubmit={handleSendChat} className="p-4 bg-white dark:bg-gray-800 border-t border-gray-50 dark:border-gray-700 flex items-center gap-3 transition-colors">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={chatMsg}
-                    onChange={(e) => setChatMsg(e.target.value)}
-                    placeholder="Viết tin nhắn..."
-                    className="w-full bg-gray-100 dark:bg-gray-900 dark:text-white border-transparent rounded-2xl px-5 py-3 text-sm focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!chatMsg.trim()}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    chatMsg.trim() 
-                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 scale-100 hover:scale-110 active:scale-95" 
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-400 scale-90"
-                  }`}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </form>
-            </div>
-          )}
 
           {/* Notifications Tab */}
           {activeTab === "notifications" && (
