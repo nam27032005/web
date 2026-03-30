@@ -1,0 +1,44 @@
+name: EasyAccomod CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Job 1: Check Backend
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./BackEnd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './BackEnd/package-lock.json'
+      - run: npm install
+      - name: Check server.js (basic check)
+        run: node --check server.js
+
+  # Job 2: Check Frontend
+  frontend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./FrontEnd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './FrontEnd/package-lock.json'
+      - run: npm install
+      - name: Build check
+        run: npm run build
