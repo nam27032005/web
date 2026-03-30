@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { RoomCard } from "../components/RoomCard";
 import { useApp } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { Room, RoomType, ROOM_TYPE_LABELS } from "../data/mockData";
 
 const DISTRICTS_BY_CITY: Record<string, string[]> = {
@@ -60,8 +61,10 @@ type SortOption = "newest" | "price_asc" | "price_desc" | "area_asc" | "views";
 
 export function SearchPage() {
   const { rooms } = useApp();
+  const { currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const isAdmin = currentUser?.role === "admin";
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [selectedCity, setSelectedCity] = useState(
     searchParams.get("city") || "TP. Hồ Chí Minh"
@@ -130,7 +133,7 @@ export function SearchPage() {
     );
 
   const filteredRooms = rooms
-    .filter((r) => r.postStatus === "approved")
+    .filter((r) => r.postStatus === "approved" || (isAdmin && r.postStatus === "pending"))
     .filter((r) => {
       // Query
       if (query) {

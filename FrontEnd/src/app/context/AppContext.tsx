@@ -116,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadRooms();
     loadReviews();
-  }, [loadRooms, loadReviews]);
+  }, [loadRooms, loadReviews, isAuthenticated, currentUser?.role]);
 
   const loadFavorites = useCallback(async () => {
     if (!isAuthenticated) return;

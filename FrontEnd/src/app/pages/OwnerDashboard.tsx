@@ -21,6 +21,7 @@ import {
   MessageCircle,
   X,
   Send,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
@@ -159,18 +160,32 @@ export function OwnerDashboard() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Quản lý bài đăng</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                 Xin chào, {currentUser.name}!{" "}
-                {!currentUser.verified && (
+                {!currentUser.verified && (currentUser.role as string) === "owner" && (
                   <span className="text-amber-600">(Tài khoản chưa được xác nhận)</span>
+                )}
+                {(currentUser.role as string) === "admin" && (
+                  <span className="text-emerald-600 font-medium"> (Quản trị viên)</span>
                 )}
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Đăng bài mới
-            </button>
+            <div className="flex gap-2">
+              {(currentUser.role as string) === "admin" && (
+                <Link
+                  to="/admin-dashboard"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  <Shield className="w-4 h-4" />
+                  Bảng Admin
+                </Link>
+              )}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Đăng bài mới
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

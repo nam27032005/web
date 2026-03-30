@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { RoomCard } from "../components/RoomCard";
 import { useApp } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { ROOM_TYPE_LABELS, RoomType } from "../data/mockData";
 
 const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Bình Dương"];
@@ -38,12 +39,14 @@ const ROOM_TYPES: RoomType[] = ["phong_tro", "chung_cu_mini", "nha_nguyen_can", 
 
 export function HomePage() {
   const { rooms } = useApp();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState("TP. Hồ Chí Minh");
 
+  const isAdmin = currentUser?.role === "admin";
   const approvedRooms = rooms
-    .filter((r) => r.postStatus === "approved" && r.status === "available")
+    .filter((r) => (r.postStatus === "approved" || (isAdmin && r.postStatus === "pending")) && r.status === "available")
     .slice(0, 6);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -59,7 +62,7 @@ export function HomePage() {
   };
 
   const stats = {
-    totalListings: rooms.filter((r) => r.postStatus === "approved").length,
+    totalListings: rooms.filter((r) => r.postStatus === "approved" || (isAdmin && r.postStatus === "pending")).length,
     totalCities: 5,
     totalOwners: 3,
     successRate: 98,

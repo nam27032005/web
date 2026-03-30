@@ -15,7 +15,7 @@ exports.getRooms = async (req, res, next) => {
       page = 1, limit = 12, sort = '-createdAt',
     } = req.query;
 
-    let { postStatus } = req.query;
+    let { postStatus, ownerId } = req.query;
     // Admin mặc định thấy tất cả bài đăng nếu không lọc cụ thể, 
     // Người dùng bình thường chỉ thấy bài 'approved'
     if (!postStatus && (!req.user || req.user.role !== 'admin')) {
@@ -23,7 +23,8 @@ exports.getRooms = async (req, res, next) => {
     }
 
     const filter = {};
-    if (postStatus) filter.postStatus = postStatus;
+    if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
+    if (ownerId) filter.ownerId = ownerId;
     if (city) filter['address.city'] = { $regex: city, $options: 'i' };
     if (district) filter['address.district'] = { $regex: district, $options: 'i' };
     if (type) filter.roomType = type;
