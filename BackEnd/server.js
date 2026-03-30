@@ -64,6 +64,13 @@ app.use('/api/reports', reportRoutes);
 try {
   const swaggerUi = require('swagger-ui-express');
   const swaggerDocument = require('./swagger-output.json');
+  
+  // Dynamically update host and schemes for production
+  if (process.env.NODE_ENV === 'production') {
+    swaggerDocument.host = 'web-hdb1.onrender.com';
+    swaggerDocument.schemes = ['https'];
+  }
+  
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, { explorer: true }));
 } catch (err) {
   console.log('⚠️ Bỏ qua Swagger Docs do chưa có swagger-output.json. Hãy chạy "npm run swagger" trước.');
