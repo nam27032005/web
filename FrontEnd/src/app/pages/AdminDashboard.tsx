@@ -46,7 +46,7 @@ import {
   Legend,
 } from "recharts";
 
-type AdminTab = "posts" | "users" | "stats" | "notifications" | "reports";
+type AdminTab = "posts" | "users" | "stats" | "notifications" | "reports" | "comments";
 
 export function AdminDashboard() {
   const { currentUser } = useAuth();
@@ -105,7 +105,7 @@ export function AdminDashboard() {
     );
   }
 
-  const adminNotifs = getNotificationsForUser(currentUser.id);
+  const adminNotifs = getNotificationsForUser(String(currentUser.id));
   const pendingRooms = rooms.filter((r) => r.postStatus === "pending");
   const pendingReviews = reviews.filter((r) => r.status === "pending");
 
@@ -152,9 +152,9 @@ export function AdminDashboard() {
   const TABS: { id: AdminTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "posts", label: "Quản lý bài đăng", icon: <FileText className="w-4 h-4" />, badge: pendingRooms.length },
     { id: "users", label: "Tài khoản chủ nhà", icon: <Users className="w-4 h-4" /> },
+    { id: "comments", label: "Quản lý bình luận", icon: <MessageCircle className="w-4 h-4" />, badge: pendingReviews.length },
     { id: "reports", label: "Báo cáo vi phạm", icon: <Flag className="w-4 h-4" />, badge: reports.filter(r => r.status === "pending").length },
     { id: "stats", label: "Thống kê", icon: <BarChart2 className="w-4 h-4" /> },
-
     { id: "notifications", label: "Thông báo", icon: <Bell className="w-4 h-4" />, badge: adminNotifs.filter(n => !n.read).length },
   ];
 
@@ -190,7 +190,7 @@ export function AdminDashboard() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 overflow-x-auto">
+          <div className="flex gap-1 overflow-x-auto mt-2 py-2">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -204,7 +204,7 @@ export function AdminDashboard() {
                 {tab.icon}
                 {tab.label}
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm">
                     {tab.badge}
                   </span>
                 )}
@@ -249,43 +249,43 @@ export function AdminDashboard() {
                       </p>
                     )}
 
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <Link
-                        to={`/room/${room._id || room.id}`}
-                        className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50"
-                      >
-                        <Eye className="w-3 h-3" />Xem chi tiết
-                      </Link>
-
-                      {room.postStatus === "pending" && (
-                        <>
-                          <button
-                            onClick={() => approveRoom(room._id!)}
-                            className="flex items-center gap-1 text-xs text-green-700 border border-green-300 bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100"
-                          >
-                            <CheckCircle className="w-3 h-3" />Phê duyệt
-                          </button>
-                          <button
-                            onClick={() => setRejectTarget(room._id!)}
-                            className="flex items-center gap-1 text-xs text-red-700 border border-red-300 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100"
-                          >
-                            <XCircle className="w-3 h-3" />Từ chối
-                          </button>
-                        </>
-                      )}
-
-                      {room.postStatus === "rejected" && (
-                        <button
-                          onClick={() => approveRoom(room._id!)}
-                          className="flex items-center gap-1 text-xs text-blue-700 border border-blue-300 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100"
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Link
+                          to={`/room/${room.id}`}
+                          className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50"
                         >
-                          <RefreshCw className="w-3 h-3" />Khôi phục
-                        </button>
-                      )}
-                    </div>
+                          <Eye className="w-3 h-3" />Xem chi tiết
+                        </Link>
+  
+                        {room.postStatus === "pending" && (
+                          <>
+                            <button
+                              onClick={() => approveRoom(String(room.id))}
+                              className="flex items-center gap-1 text-xs text-green-700 border border-green-300 bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100"
+                            >
+                              <CheckCircle className="w-3 h-3" />Phê duyệt
+                            </button>
+                            <button
+                              onClick={() => setRejectTarget(String(room.id))}
+                              className="flex items-center gap-1 text-xs text-red-700 border border-red-300 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100"
+                            >
+                              <XCircle className="w-3 h-3" />Từ chối
+                            </button>
+                          </>
+                        )}
+  
+                        {room.postStatus === "rejected" && (
+                          <button
+                            onClick={() => approveRoom(String(room.id))}
+                            className="flex items-center gap-1 text-xs text-blue-700 border border-blue-300 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100"
+                          >
+                            <RefreshCw className="w-3 h-3" />Khôi phục
+                          </button>
+                        )}
+                      </div>
 
                     {/* Reject reason input */}
-                    {rejectTarget === room._id && (
+                    {rejectTarget === String(room.id) && (
                       <div className="mt-3 flex gap-2">
                         <input
                           type="text"
@@ -296,7 +296,7 @@ export function AdminDashboard() {
                           autoFocus
                         />
                         <button
-                          onClick={() => handleReject(room._id!)}
+                          onClick={() => handleReject(String(room.id))}
                           className="text-xs bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600"
                         >
                           Xác nhận
@@ -314,31 +314,54 @@ export function AdminDashboard() {
               </div>
             ))}
 
-            {/* Pending Reviews */}
-            {pendingReviews.length > 0 && (
-              <div className="mt-6">
-                <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Bình luận chờ kiểm duyệt ({pendingReviews.length})</h2>
-                {pendingReviews.map((rev) => (
-                  <div key={rev._id || rev.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 mb-3">
-                    <div className="flex items-start gap-3">
-                      <img src={rev.userAvatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{rev.userName}</p>
-                        <div className="flex gap-0.5 my-1">
-                          {[1,2,3,4,5].map(s => (
-                            <Star key={s} className={`w-3 h-3 ${s <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`} />
-                          ))}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{rev.comment}</p>
+          </div>
+        )}
+
+        {/* Comments Management */}
+        {activeTab === "comments" && (
+          <div className="space-y-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Bình luận chờ kiểm duyệt ({pendingReviews.length})</h2>
+            {pendingReviews.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-10 text-center">
+                <MessageCircle className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">Không có bình luận nào chờ duyệt.</p>
+              </div>
+            ) : (
+              pendingReviews.map((rev) => (
+                <div key={rev.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 mb-3">
+                  <div className="flex items-start gap-3">
+                    <img src={rev.userAvatar} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-emerald-50" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{rev.userName}</p>
+                        <span className="text-xs text-gray-400">{formatDateTime(rev.createdAt)}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => approveReview(rev._id!)} className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200">Duyệt</button>
-                        <button onClick={() => rejectReview(rev._id!)} className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200">Từ chối</button>
+                      <div className="flex gap-0.5 mb-2">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`} />
+                        ))}
                       </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                        {rev.comment}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button 
+                        onClick={() => approveReview(String(rev.id))} 
+                        className="text-xs font-bold bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
+                      >
+                        Duyệt
+                      </button>
+                      <button 
+                        onClick={() => rejectReview(String(rev.id))} 
+                        className="text-xs font-bold bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100"
+                      >
+                        Từ chối
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         )}
@@ -424,7 +447,7 @@ export function AdminDashboard() {
                       </div>
                       {report.status === "pending" && (
                         <button
-                          onClick={() => resolveReport(report.id)}
+                          onClick={() => resolveReport(String(report.id))}
                           className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-200 ml-3 flex-shrink-0"
                         >
                           Đã giải quyết
@@ -548,8 +571,8 @@ export function AdminDashboard() {
             ) : (
               adminNotifs.map((notif) => (
                 <div
-                  key={notif._id || notif.id}
-                  onClick={() => !notif.read && markNotificationRead(notif._id || notif.id)}
+                  key={notif.id}
+                  onClick={() => !notif.read && markNotificationRead(String(notif.id))}
                   className={`p-5 border-b border-gray-50 dark:border-gray-700 last:border-0 group cursor-pointer transition-all ${
                     !notif.read ? "bg-emerald-50/50 dark:bg-emerald-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-900/50"
                   }`}
@@ -569,7 +592,7 @@ export function AdminDashboard() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteNotification(notif._id || notif.id);
+                        deleteNotification(String(notif.id));
                       }}
                       className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                     >

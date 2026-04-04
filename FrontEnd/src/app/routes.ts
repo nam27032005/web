@@ -26,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "profile", Component: ProfilePage },
       { path: "owner", Component: OwnerDashboard },
       { path: "admin", Component: AdminDashboard },
+      { path: "users/:id", Component: ProfilePage },
       { path: "pricing", Component: InfoPage },
       { path: "guide", Component: InfoPage },
       { path: "terms", Component: InfoPage },

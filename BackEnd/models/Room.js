@@ -1,68 +1,77 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const roomSchema = new mongoose.Schema(
-  {
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    ownerName: { type: String, required: true },
-    ownerPhone: { type: String, required: true },
-    title: { type: String, required: true, trim: true },
-    description: { type: String, required: true },
-    address: {
-      street: String,
-      ward: String,
-      district: String,
-      city: String,
-      full: String,
-    },
-    nearBy: [String],
-    roomType: {
-      type: String,
-      enum: ['phong_tro', 'chung_cu_mini', 'nha_nguyen_can', 'chung_cu_nguyen_can'],
-      required: true,
-    },
-    roomCount: { type: Number, default: 1 },
-    price: { type: Number, required: true },
-    priceUnit: { type: String, enum: ['month', 'quarter', 'year'], default: 'month' },
-    area: { type: Number, required: true },
-    sharedOwner: { type: Boolean, default: false },
-    bathroom: {
-      type: { type: String, enum: ['private', 'shared'], default: 'private' },
-      hasHotWater: { type: Boolean, default: false },
-    },
-    kitchen: { type: String, enum: ['private', 'shared', 'none'], default: 'shared' },
-    hasAC: { type: Boolean, default: false },
-    hasBalcony: { type: Boolean, default: false },
-    electricityPrice: { type: String, enum: ['standard', 'rental'], default: 'standard' },
-    electricityRate: Number,
-    waterRate: Number,
-    amenities: [String],
-    images: [String],
-    status: { type: String, enum: ['available', 'rented'], default: 'available' },
-    postStatus: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected', 'expired'],
-      default: 'pending',
-    },
-    displayDuration: { type: Number, default: 1 },
-    displayDurationUnit: {
-      type: String,
-      enum: ['week', 'month', 'quarter', 'year'],
-      default: 'month',
-    },
-    postFee: { type: Number, default: 0 },
-    views: { type: Number, default: 0 },
-    favorites: { type: Number, default: 0 },
-    approvedAt: Date,
-    expiresAt: Date,
-    rejectedReason: String,
+const Room = sequelize.define('Room', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  ownerId: { type: DataTypes.INTEGER, allowNull: false },
+  title: { type: DataTypes.STRING(200), allowNull: false },
+  description: { type: DataTypes.TEXT, defaultValue: null },
+  price: { type: DataTypes.DECIMAL(12, 0), allowNull: false },
+  area: { type: DataTypes.FLOAT, defaultValue: null },
+  roomType: {
+    type: DataTypes.ENUM('phong_tro', 'chung_cu_mini', 'nha_nguyen_can', 'chung_cu_nguyen_can'),
+    defaultValue: 'phong_tro',
+    allowNull: false,
   },
-  { timestamps: true }
-);
+  status: {
+    type: DataTypes.ENUM('available', 'rented'),
+    defaultValue: 'available',
+  },
+  postStatus: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'expired'),
+    defaultValue: 'pending',
+  },
+  address_street: { type: DataTypes.STRING(255), defaultValue: null },
+  address_ward: { type: DataTypes.STRING(100), defaultValue: null },
+  address_district: { type: DataTypes.STRING(100), defaultValue: null },
+  address_city: { type: DataTypes.STRING(100), defaultValue: null },
+  address_full: { type: DataTypes.STRING(500), defaultValue: null },
+  latitude: { type: DataTypes.FLOAT, defaultValue: null },
+  longitude: { type: DataTypes.FLOAT, defaultValue: null },
+  nearBy: { type: DataTypes.JSON, defaultValue: [] },
+  amenities: { type: DataTypes.JSON, defaultValue: [] },
+  images: { type: DataTypes.JSON, defaultValue: [] },
+  roomCount: { type: DataTypes.INTEGER, defaultValue: 1 },
+  priceUnit: {
+    type: DataTypes.ENUM('month', 'quarter', 'year'),
+    defaultValue: 'month',
+  },
+  sharedOwner: { type: DataTypes.BOOLEAN, defaultValue: false },
+  bathroom_type: {
+    type: DataTypes.ENUM('private', 'shared'),
+    defaultValue: 'private',
+  },
+  bathroom_hasHotWater: { type: DataTypes.BOOLEAN, defaultValue: false },
+  kitchen: {
+    type: DataTypes.ENUM('private', 'shared', 'none'),
+    defaultValue: 'private',
+  },
+  hasAC: { type: DataTypes.BOOLEAN, defaultValue: false },
+  hasBalcony: { type: DataTypes.BOOLEAN, defaultValue: false },
+  electricityPrice: {
+    type: DataTypes.ENUM('standard', 'rental'),
+    defaultValue: 'standard',
+  },
+  electricityRate: { type: DataTypes.DECIMAL(10, 2), defaultValue: null },
+  waterRate: { type: DataTypes.DECIMAL(10, 2), defaultValue: null },
+  postFee: { type: DataTypes.DECIMAL(12, 0), defaultValue: 0 },
+  views: { type: DataTypes.INTEGER, defaultValue: 0 },
+  favorites: { type: DataTypes.INTEGER, defaultValue: 0 },
+  displayDuration: { type: DataTypes.INTEGER, defaultValue: 1 },
+  displayDurationUnit: {
+    type: DataTypes.ENUM('day', 'week', 'month'),
+    defaultValue: 'month',
+  },
+  approvedAt: { type: DataTypes.DATE, defaultValue: null },
+  expiresAt: { type: DataTypes.DATE, defaultValue: null },
+  rejectReason: { type: DataTypes.TEXT, defaultValue: null },
+}, {
+  tableName: 'rooms',
+  timestamps: true,
+  indexes: [
+    { fields: ['ownerId', 'createdAt'] },
+    { fields: ['postStatus'] },
+  ],
+});
 
-// Index để tìm kiếm nhanh
-roomSchema.index({ 'address.city': 1, 'address.district': 1 });
-roomSchema.index({ roomType: 1, postStatus: 1, status: 1 });
-roomSchema.index({ price: 1 });
-roomSchema.index({ title: 'text', 'address.full': 'text' });
-
-module.exports = mongoose.model('Room', roomSchema);
+module.exports = Room;

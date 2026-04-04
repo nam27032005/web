@@ -3,8 +3,13 @@ const router = express.Router();
 const {
   getRooms, getRoomById, createRoom, updateRoom, deleteRoom,
   approveRoom, rejectRoom, updateRoomStatus, incrementViews, toggleFavorite,
+  getMyRooms,
 } = require('../controllers/roomController');
 const { protect, authorize, protectOptional } = require('../middleware/auth');
+
+// ⚠️ Static routes MUST be declared before /:id to avoid conflict
+// Owner: get own rooms
+router.get('/my-rooms', protect, authorize('owner', 'admin'), getMyRooms);
 
 // Public (with optional auth)
 router.get('/', protectOptional, getRooms);

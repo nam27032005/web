@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "../../lib/api";
-import { Room, Review, Notification, Report, RoomStatus } from "../data/mockData";
+import { Room, Review, Notification, Report, RoomStatus, ChatMessage, Conversation } from "../data/mockData";
 import { useAuth } from "./AuthContext";
 
 interface AppContextType {
   rooms: Room[];
+  myRooms: Room[];
   reviews: Review[];
   notifications: Notification[];
   reports: Report[];
@@ -26,8 +27,17 @@ interface AppContextType {
   loadReports: () => Promise<void>;
   getNotificationsForUser: (userId: string) => Notification[];
   loadRooms: () => Promise<void>;
+  loadMyRooms: () => Promise<void>;
   loadReviews: () => Promise<void>;
   incrementViews: (roomId: string) => void;
+  // Chat
+  conversations: Conversation[];
+  activeChat: Conversation | null;
+  loadConversations: () => Promise<void>;
+  setActiveChat: (conf: Conversation | null) => void;
+  markChatAsRead: (convId: string | number) => Promise<void>;
+  sendMessage: (convId: string | number, content: string) => Promise<void>;
+  getOrCreateConversation: (ownerId: string | number, roomId?: string | number) => Promise<Conversation | null>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -36,19 +46,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { currentUser, isAuthenticated } = useAuth();
   
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeChat, setActiveChat] = useState<Conversation | null>(null);
 
   const loadRooms = useCallback(async () => {
     try {
-      const res = await api.get("/rooms?limit=100");
+      const allStatusQuery = currentUser?.role === "admin" ? "&allStatus=true" : "";
+      const res = await api.get(`/rooms?limit=100${allStatusQuery}`);
       if (res.data.success) setRooms(res.data.rooms);
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [currentUser?.role]);
+
+  const loadMyRooms = useCallback(async () => {
+    if (!isAuthenticated || currentUser?.role !== "owner") return;
+    try {
+      const res = await api.get("/rooms/my-rooms");
+      if (res.data.success) setMyRooms(res.data.rooms);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [isAuthenticated, currentUser?.role]);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -87,7 +111,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadFavorites = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const res = await api.get("/users/me/favorites");
+      const res = await api.get("/users/me/favorite-ids");
       if (res.data.success) {
         setFavorites(res.data.favorites || []);
       }
@@ -96,13 +120,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated]);
 
+  const loadConversations = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.get("/chat/conversations");
+      if (res.data.success) setConversations(res.data.conversations);
+    } catch (err) {}
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated) {
       loadNotifications();
-      loadFavorites();
+      loadConversations();
+      if (currentUser?.role === "owner") {
+        loadMyRooms();
+      }
       
       const interval = setInterval(() => {
         loadNotifications();
+        loadConversations();
+        if (currentUser?.role === "owner") {
+          loadMyRooms();
+        }
         if (currentUser?.role === "admin") {
           loadReports();
         }
@@ -112,12 +151,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       setNotifications([]);
       setFavorites([]);
+      setConversations([]);
+      setMyRooms([]);
+      setActiveChat(null);
     }
-  }, [isAuthenticated, loadNotifications, loadFavorites, loadReports, currentUser?.role]);
+  }, [isAuthenticated, loadNotifications, loadFavorites, loadReports, loadConversations, loadMyRooms, currentUser?.role]);
 
   const addRoom = async (roomData: Partial<Room>) => {
     try {
       await api.post("/rooms", roomData);
+      loadMyRooms(); // Refresh owner's list
       loadRooms();
       return { success: true, message: "Đăng bài thành công, chờ duyệt." };
     } catch (err: any) {
@@ -128,6 +171,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateRoom = async (id: string, data: Partial<Room>) => {
     try {
       await api.put(`/rooms/${id}`, data);
+      loadMyRooms();
       loadRooms();
       return { success: true, message: "Cập nhật thành công." };
     } catch (err: any) {
@@ -153,12 +197,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleFavorite = async (roomId: string) => {
     if (!isAuthenticated) return;
     try {
-      const isFav = favorites.includes(roomId);
+      const rid = String(roomId);
+      const isFav = favorites.includes(rid);
       const action = isFav ? "remove" : "add";
-      setFavorites(prev => action === "add" ? [...prev, roomId] : prev.filter(id => id !== roomId));
+      
+      setFavorites(prev => action === "add" ? [...prev, rid] : prev.filter(id => id !== rid));
+      
       const res = await api.post(`/rooms/${roomId}/favorite`, { action });
       if (res.data.success) {
-        setRooms(prev => prev.map(r => (r._id === roomId || r.id === roomId) ? { ...r, favorites: res.data.favorites } : r));
+        setRooms(prev => prev.map(r => (String(r._id) === rid || String(r.id) === rid) ? { ...r, favorites: res.data.favoriteCount } : r));
       }
     } catch (err) {
       loadFavorites();
@@ -248,8 +295,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteNotification,
         getNotificationsForUser,
         incrementViews,
-        loadRooms,
         loadReviews,
+        loadRooms,
+        loadMyRooms,
+        myRooms,
+        // Chat
+        conversations,
+        activeChat,
+        loadConversations,
+        setActiveChat,
+        sendMessage: async (convId, content) => {
+          try {
+            const res = await api.post(`/chat/conversations/${convId}/messages`, { content });
+            if (res.data.success) {
+              // Reload messages if needed or update locally
+              loadConversations();
+              if (activeChat && activeChat.id === convId) {
+                 const msgRes = await api.get(`/chat/conversations/${convId}/messages`);
+                 if (msgRes.data.success) {
+                    setActiveChat({ ...activeChat, messages: msgRes.data.messages });
+                 }
+              }
+            }
+          } catch (err) {}
+        },
+        markChatAsRead: async (convId) => {
+          try {
+            // Update local state IMMEDIATELY for responsiveness
+            setConversations(prev => prev.map(c => 
+              String(c.id) === String(convId) ? { ...c, unreadCount: 0 } : c
+            ));
+            await api.put(`/chat/conversations/${convId}/read`);
+          } catch (err) {
+            console.error('markChatAsRead error:', err);
+          }
+        },
+        getOrCreateConversation: async (ownerId, roomId) => {
+          try {
+            const res = await api.post("/chat/conversations", { ownerId, roomId });
+            if (res.data.success) {
+              const conv = res.data.conversation;
+              // Fetch full details if needed
+              loadConversations();
+              return conv;
+            }
+          } catch (err) {}
+          return null;
+        },
       }}
     >
       {children}

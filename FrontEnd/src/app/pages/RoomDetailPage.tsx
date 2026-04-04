@@ -28,15 +28,45 @@ import {
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
-import { ROOM_TYPE_LABELS, formatPrice, Review, formatDate, formatDateTime } from "../data/mockData";
+import api from "../../lib/api";
+import { ROOM_TYPE_LABELS, formatPrice, Review, formatDate, formatDateTime, RoomType, getUserAvatar } from "../data/mockData";
 
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { rooms, reviews, favorites, toggleFavorite, addReview, loadReviews, addReport, incrementViews } = useApp();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { rooms, reviews, favorites, toggleFavorite, addReview, loadReviews, addReport, incrementViews, getOrCreateConversation, setActiveChat, markChatAsRead } = useApp();
+  const { currentUser, isAuthenticated, isRole } = useAuth();
 
-  const room = rooms.find((r) => r.id === id);
+  const roomFromStore = rooms.find((r) => String(r.id) === id || String(r._id) === id);
+  const [room, setRoom] = useState<any>(roomFromStore ?? null);
+  const [fetchLoading, setFetchLoading] = useState(!roomFromStore);
+  const [error, setError] = useState<string | null>(null);
+
+  // Nếu rooms store chưa có (user vào thẳng URL), fetch trực tiếp từ API
+  useEffect(() => {
+    window.scrollTo(0, 0); // Đảm bảo cuộn lên đầu trang khi vào chi tiết phòng
+    
+    const fetchRoom = async () => {
+      if (!id) return;
+      try {
+        setFetchLoading(true);
+        const res = await api.get(`/rooms/${id}`);
+        if (res.data?.success && res.data?.room) {
+          setRoom(res.data.room);
+          incrementViews(id);
+        } else {
+          setError("Phòng trọ không tồn tại hoặc đã bị gỡ.");
+        }
+      } catch (err) {
+        console.error("Lỗi fetch chi tiết room:", err);
+        setError("Không thể kết nối đến máy chủ.");
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+
+    if (!roomFromStore) fetchRoom();
+  }, [id, incrementViews, roomFromStore]);
   const [activeImg, setActiveImg] = useState(0);
   const [showReport, setShowReport] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -48,8 +78,44 @@ export function RoomDetailPage() {
   const [reviewDone, setReviewDone] = useState(false);
 
   useEffect(() => {
-    if (room) incrementViews(room.id);
-  }, [id]);
+    if (room?.id) incrementViews(room.id);
+  }, [room?.id]);
+
+  if (fetchLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-10 h-10 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Đã có lỗi xảy ra</h2>
+          <p className="text-gray-500 mb-8">{error}</p>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold transition-colors"
+            >
+              Thử lại
+            </button>
+            <Link 
+              to="/search"
+              className="w-full border-2 border-gray-100 hover:border-emerald-100 hover:bg-emerald-50 py-3 rounded-xl font-semibold text-gray-600 hover:text-emerald-600 transition-all"
+            >
+              Quay lại tìm kiếm
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!room) {
     return (
@@ -64,18 +130,33 @@ export function RoomDetailPage() {
     );
   }
 
-  const isFavorite = favorites.includes(room.id);
-  const roomReviews = reviews.filter((r) => r.roomId === room.id && r.status === "approved");
+  const isFavorite = favorites.includes(String(room.id));
+  const canFavorite = isAuthenticated && isRole("renter");
+  const roomReviews = reviews.filter((r) => String(r.roomId) === String(room.id) && r.status === "approved");
   const avgRating = roomReviews.length
     ? roomReviews.reduce((s, r) => s + r.rating, 0) / roomReviews.length
     : 0;
 
-  const handleFavorite = () => {
+  // Đảm bảo images luôn là array (API có thể trả string JSON)
+  if (!Array.isArray(room.images)) {
+    try { room.images = JSON.parse(room.images || '[]'); } catch { room.images = []; }
+  }
+
+  const handleFavorite = async () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
-    toggleFavorite(room.id);
+    const rid = String(room.id);
+    const isNowFav = !isFavorite;
+    
+    // Cập nhật cục bộ để UX mượt mà
+    setRoom((prev: any) => ({
+      ...prev,
+      favorites: isNowFav ? (prev.favorites + 1) : Math.max(0, prev.favorites - 1)
+    }));
+    
+    await toggleFavorite(rid);
   };
 
   const handleReport = (e: React.FormEvent) => {
@@ -98,7 +179,7 @@ export function RoomDetailPage() {
     
     // Gửi lên server (Server sẽ tự gán userId, userName, avatar từ Token)
     const reviewData = {
-      roomId: room._id || room.id,
+      roomId: Number(room.id),
       rating: reviewRating,
       comment: reviewComment,
     };
@@ -111,19 +192,68 @@ export function RoomDetailPage() {
     loadReviews(); 
   };
 
-  const prevImg = () => setActiveImg((v) => (v === 0 ? room.images.length - 1 : v - 1));
-  const nextImg = () => setActiveImg((v) => (v === room.images.length - 1 ? 0 : v + 1));
+  const handleStartChat = async () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    const ownerId = room.ownerId || room.owner?.id;
+    if (!ownerId) return;
+    
+    // Disable chat with self
+    if (String(ownerId) === String(currentUser?.id)) return;
 
-  const facilityItems = [
-    { icon: <Bath className="w-4 h-4" />, label: "Phòng tắm", value: `${room.bathroom.type === "private" ? "Khép kín" : "Chung"} · ${room.bathroom.hasHotWater ? "Có nóng lạnh" : "Không nóng lạnh"}` },
-    { icon: <UtensilsCrossed className="w-4 h-4" />, label: "Bếp", value: room.kitchen === "private" ? "Bếp riêng" : room.kitchen === "shared" ? "Bếp chung" : "Không nấu ăn" },
-    { icon: <Wind className="w-4 h-4" />, label: "Điều hòa", value: room.hasAC ? "Có" : "Không có" },
-    { icon: <Maximize2 className="w-4 h-4" />, label: "Ban công", value: room.hasBalcony ? "Có" : "Không có" },
-    { icon: <Zap className="w-4 h-4" />, label: "Điện", value: room.electricityPrice === "standard" ? "Giá dân" : `${room.electricityRate?.toLocaleString()}đ/kW` },
-    { icon: <Droplets className="w-4 h-4" />, label: "Nước", value: room.electricityPrice === "standard" ? "Giá dân" : `${room.waterRate?.toLocaleString()}đ/m³` },
-    { icon: <User className="w-4 h-4" />, label: "Chung chủ", value: room.sharedOwner ? "Có chung chủ" : "Không chung chủ" },
-    { icon: <BedDouble className="w-4 h-4" />, label: "Số phòng", value: `${room.roomCount} phòng` },
-  ];
+    const conv = await getOrCreateConversation(ownerId, room.id);
+    if (conv) {
+      if ((conv.unreadCount ?? 0) > 0) {
+        markChatAsRead(conv.id);
+      }
+      // Fetch messages for this conversation
+      const res = await api.get(`/chat/conversations/${conv.id}/messages`);
+      if (res.data.success) {
+        setActiveChat({ ...conv, messages: res.data.messages });
+      } else {
+        setActiveChat(conv);
+      }
+    }
+  };
+
+  const prevImg = () => setActiveImg((v) => (v === 0 ? (room.images?.length || 1) - 1 : v - 1));
+  const nextImg = () => setActiveImg((v) => (v === (room.images?.length || 1) - 1 ? 0 : v + 1));
+
+    // amenities từ API là array string, có thể là JSON string trong store
+  const amenitiesList: string[] = (() => {
+    const raw = room.amenities;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try { return JSON.parse(raw); } catch { return [raw]; }
+  })();
+
+  const amenityIconMap: Record<string, JSX.Element> = {
+    'wifi': <Wind className="w-4 h-4" />,
+    'điều hòa': <Wind className="w-4 h-4" />,
+    'máy lạnh': <Wind className="w-4 h-4" />,
+    'tủ lạnh': <Droplets className="w-4 h-4" />,
+    'máy giặt': <Droplets className="w-4 h-4" />,
+    'máy giặt chung': <Droplets className="w-4 h-4" />,
+    'bếp': <UtensilsCrossed className="w-4 h-4" />,
+    'bếp riêng': <UtensilsCrossed className="w-4 h-4" />,
+    'bếp chung': <UtensilsCrossed className="w-4 h-4" />,
+    'ban công': <Maximize2 className="w-4 h-4" />,
+    'gác lửng': <BedDouble className="w-4 h-4" />,
+    'bảo vệ': <User className="w-4 h-4" />,
+    'bảo vệ 24/7': <User className="w-4 h-4" />,
+    'thang máy': <Zap className="w-4 h-4" />,
+    'chỗ để xe': <Zap className="w-4 h-4" />,
+    'nhà vệ sinh riêng': <Bath className="w-4 h-4" />,
+    'nóng lạnh': <Bath className="w-4 h-4" />,
+  };
+
+  const facilityItems = amenitiesList.map((a) => ({
+    icon: amenityIconMap[a.toLowerCase()] ?? <Zap className="w-4 h-4" />,
+    label: a,
+    value: "✓",
+  }));
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-12">
@@ -146,11 +276,11 @@ export function RoomDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative h-64 md:h-96">
                 <img
-                  src={room.images[activeImg]}
+                  src={room.images?.[activeImg] || ""}
                   alt={room.title}
                   className="w-full h-full object-cover"
                 />
-                {room.images.length > 1 && (
+                {(room.images?.length || 0) > 1 && (
                   <>
                     <button
                       onClick={prevImg}
@@ -167,7 +297,7 @@ export function RoomDetailPage() {
                   </>
                 )}
                 <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                  {activeImg + 1}/{room.images.length}
+                  {activeImg + 1}/{(room.images?.length || 0)}
                 </div>
                 {room.status === "rented" && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -178,7 +308,7 @@ export function RoomDetailPage() {
                 )}
               </div>
               <div className="flex gap-2 p-3 overflow-x-auto">
-                {room.images.map((img, i) => (
+                {room.images?.map((img: string, i: number) => (
                   <button
                     key={i}
                     onClick={() => setActiveImg(i)}
@@ -198,7 +328,7 @@ export function RoomDetailPage() {
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-2 mb-2">
                     <span className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                      {ROOM_TYPE_LABELS[room.roomType]}
+                      {ROOM_TYPE_LABELS[room.roomType as RoomType]}
                     </span>
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                       room.status === "available" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -209,14 +339,16 @@ export function RoomDetailPage() {
                   <h1 className="text-xl font-bold text-gray-900 dark:text-white">{room.title}</h1>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <button
-                    onClick={handleFavorite}
-                    className={`w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
-                      isFavorite ? "bg-red-500 border-red-500 text-white" : "border-gray-200 text-gray-400 hover:border-red-300"
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                  </button>
+                  {canFavorite && (
+                    <button
+                      onClick={handleFavorite}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
+                        isFavorite ? "bg-red-500 border-red-500 text-white" : "border-gray-200 text-gray-400 hover:border-red-300"
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                    </button>
+                  )}
                   <button className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 text-gray-400 hover:border-gray-300">
                     <Share2 className="w-4 h-4" />
                   </button>
@@ -233,13 +365,9 @@ export function RoomDetailPage() {
                   <p className="text-2xl font-bold text-emerald-600">{formatPrice(room.price)}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">/{room.priceUnit === "month" ? "tháng" : room.priceUnit === "quarter" ? "quý" : "năm"}</p>
                 </div>
-                <div className="text-center border-x border-gray-100">
-                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{room.area}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">m² diện tích</p>
-                </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{room.roomCount}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">phòng ngủ</p>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{room.area ?? "—"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">m² diện tích</p>
                 </div>
               </div>
 
@@ -267,11 +395,11 @@ export function RoomDetailPage() {
               <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Mô tả chi tiết</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{room.description}</p>
 
-              {room.nearBy.length > 0 && (
+              {(room.nearBy?.length || 0) > 0 && (
                 <div className="mt-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Gần các địa điểm:</p>
                   <div className="flex flex-wrap gap-2">
-                    {room.nearBy.map((n, i) => (
+                    {room.nearBy?.map((n: string, i: number) => (
                       <span key={i} className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full">
                         <MapPin className="w-3 h-3" />{n}
                       </span>
@@ -293,11 +421,11 @@ export function RoomDetailPage() {
                   </div>
                 ))}
               </div>
-              {room.amenities.length > 0 && (
+              {(room.amenities?.length || 0) > 0 && (
                 <div className="mt-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Tiện ích khác:</p>
                   <div className="flex flex-wrap gap-2">
-                    {room.amenities.map((a, i) => (
+                    {room.amenities?.map((a: string, i: number) => (
                       <span key={i} className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2.5 py-1 rounded-full">
                         <CheckCircle className="w-3 h-3" />{a}
                       </span>
@@ -370,7 +498,11 @@ export function RoomDetailPage() {
                 <div className="space-y-4">
                   {roomReviews.map((rev) => (
                     <div key={rev.id} className="flex gap-3">
-                      <img src={rev.userAvatar} alt={rev.userName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                      <img 
+                        src={getUserAvatar({ avatar: rev.userAvatar, name: rev.userName, gender: rev.userGender })} 
+                        alt={rev.userName} 
+                        className="w-9 h-9 rounded-full object-cover flex-shrink-0" 
+                      />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm font-medium text-gray-900 dark:text-white">{rev.userName}</span>
@@ -447,11 +579,15 @@ export function RoomDetailPage() {
             {/* Contact Card */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm sticky top-24">
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-emerald-600" />
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center overflow-hidden">
+                  <img 
+                    src={getUserAvatar(room.owner)} 
+                    alt={room.owner?.name} 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{room.ownerName}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{room.owner?.name || room.ownerName || "Chủ nhà"}</p>
                   <div className="flex items-center gap-1 text-xs text-emerald-600">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Đã xác thực</span>
@@ -460,13 +596,23 @@ export function RoomDetailPage() {
               </div>
 
               <a
-                href={`tel:${room.ownerPhone}`}
+                href={`tel:${room.owner?.phone || room.ownerPhone || ""}`}
                 className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-medium text-sm transition-colors"
               >
-                <Phone className="w-4 h-4" />{room.ownerPhone}
+                <Phone className="w-4 h-4" />{room.owner?.phone || room.ownerPhone || "Liên hệ chủ nhà"}
               </a>
+              
+              {isAuthenticated && String(room.ownerId || room.owner?.id) !== String(currentUser?.id) && (
+                <button
+                  onClick={handleStartChat}
+                  className="flex items-center justify-center gap-2 w-full mt-3 bg-white hover:bg-gray-50 text-emerald-600 border-2 border-emerald-600 py-3 rounded-xl font-medium text-sm transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />Nhắn tin cho chủ nhà
+                </button>
+              )}
+              
               <p className="text-xs text-gray-400 text-center mt-2">
-                Nhấn để gọi điện trực tiếp cho chủ nhà
+                Nhấn để liên hệ trực tiếp cho chủ nhà
               </p>
 
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm text-gray-600">
@@ -484,22 +630,26 @@ export function RoomDetailPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleFavorite}
-                className={`flex items-center justify-center gap-2 w-full mt-4 py-3 rounded-xl font-medium text-sm border-2 transition-colors ${
-                  isFavorite
-                    ? "bg-red-50 border-red-300 text-red-600"
-                    : "border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500"
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                {isFavorite ? "Đã lưu yêu thích" : "Lưu vào yêu thích"}
-              </button>
+              {(canFavorite || !isAuthenticated) && (
+                <>
+                  <button
+                    onClick={handleFavorite}
+                    className={`flex items-center justify-center gap-2 w-full mt-4 py-3 rounded-xl font-medium text-sm border-2 transition-colors ${
+                      isFavorite
+                        ? "bg-red-50 border-red-300 text-red-600"
+                        : "border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500"
+                    }`}
+                  >
+                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                    {isFavorite ? "Đã lưu yêu thích" : "Lưu vào yêu thích"}
+                  </button>
 
-              {!isAuthenticated && (
-                <p className="text-xs text-gray-400 text-center mt-2">
-                  <Link to="/login" className="text-emerald-600 hover:underline">Đăng nhập</Link> để lưu yêu thích
-                </p>
+                  {!isAuthenticated && (
+                    <p className="text-xs text-gray-400 text-center mt-2">
+                      <Link to="/login" className="text-emerald-600 hover:underline">Đăng nhập</Link> để lưu yêu thích
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

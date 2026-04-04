@@ -1,58 +1,56 @@
-const Report = require('../models/Report');
+const { Report, Room, User } = require('../models');
 
-/**
- * GET /api/reports             – Admin: xem tất cả báo cáo
- * Query: status=pending|resolved
- */
-exports.getReports = async (req, res, next) => {
+// GET /api/reports (admin)
+exports.getReports = async (req, res) => {
   try {
-    const filter = {};
-    if (req.query.status) filter.status = req.query.status;
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Không có quyền.' });
+    const where = {};
+    if (req.query.status) where.status = req.query.status;
 
-    const reports = await Report.find(filter)
-      .populate('roomId', 'title address')
-      .populate('userId', 'name email')
-      .sort({ createdAt: -1 });
+    const reports = await Report.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+    });
 
-    res.json({ success: true, count: reports.length, reports });
+    // Manual join để giả lập populate
+    const enriched = await Promise.all(reports.map(async (r) => {
+      const room = await Room.findByPk(r.roomId, { attributes: ['id', 'title', 'address_full'] });
+      const user = await User.findByPk(r.userId, { attributes: ['id', 'name', 'email'] });
+      return { ...r.toJSON(), room, user };
+    }));
+
+    res.json({ success: true, count: reports.length, reports: enriched });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * POST /api/reports            – Người dùng gửi báo cáo phòng
- * Body: { roomId, reason, description }
- */
-exports.createReport = async (req, res, next) => {
+// POST /api/reports
+exports.createReport = async (req, res) => {
   try {
     const { roomId, reason, description } = req.body;
     const report = await Report.create({
       roomId,
-      userId: req.user._id,
+      userId: req.user.id,
       reason,
       description,
       status: 'pending',
     });
     res.status(201).json({ success: true, message: 'Đã gửi báo cáo.', report });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/reports/:id/resolve – Admin đánh dấu đã xử lý
- */
-exports.resolveReport = async (req, res, next) => {
+// PUT /api/reports/:id/resolve (admin)
+exports.resolveReport = async (req, res) => {
   try {
-    const report = await Report.findByIdAndUpdate(
-      req.params.id,
-      { status: 'resolved' },
-      { new: true }
-    );
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Không có quyền.' });
+    const report = await Report.findByPk(req.params.id);
     if (!report) return res.status(404).json({ success: false, message: 'Không tìm thấy báo cáo.' });
-    res.json({ success: true, message: 'Đã xử lý báo cáo.', report });
+    await report.update({ status: 'resolved' });
+    res.json({ success: true, message: 'Đã xử lý.', report });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };

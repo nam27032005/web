@@ -59,6 +59,21 @@ const SORT_OPTIONS = [
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "area_asc" | "views";
 
+const normalizeLocation = (str: string) => {
+  if (!str) return "";
+  let n = str
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, "");
+  // Common mappings
+  if (n === "tphochiminh" || n === "hochiminh" || n === "thanhphohochiminh") return "tphcm";
+  if (n === "hanoi") return "hn";
+  return n;
+};
+
 export function SearchPage() {
   const { rooms } = useApp();
   const { currentUser } = useAuth();
@@ -108,6 +123,9 @@ export function SearchPage() {
     e.preventDefault();
     const params = new URLSearchParams();
     if (query) params.set("q", query);
+    if (selectedCity && selectedCity !== "Tất cả thành phố") params.set("city", selectedCity);
+    if (selectedDistrict && selectedDistrict !== "Tất cả") params.set("district", selectedDistrict);
+    if (selectedType) params.set("type", selectedType);
     setSearchParams(params);
   };
 
@@ -147,12 +165,23 @@ export function SearchPage() {
       }
       // Type
       if (selectedType && r.roomType !== selectedType) return false;
+      // City
+      if (selectedCity && selectedCity !== "Tất cả thành phố") {
+        const nCity = normalizeLocation(r.address.city);
+        const nSelected = normalizeLocation(selectedCity);
+        if (nCity !== nSelected && !nCity.includes(nSelected) && !nSelected.includes(nCity))
+          return false;
+      }
       // District
-      if (selectedDistrict !== "Tất cả" && !r.address.district.includes(selectedDistrict))
-        return false;
+      if (selectedDistrict && selectedDistrict !== "Tất cả") {
+        const nDist = normalizeLocation(r.address.district);
+        const nSelected = normalizeLocation(selectedDistrict);
+        if (nDist !== nSelected && !nDist.includes(nSelected) && !nSelected.includes(nDist))
+          return false;
+      }
       // Price
       const range = PRICE_RANGES[priceRange];
-      if (r.price < range.min || r.price > range.max) return false;
+      if (r.price < range.min || r.price > (range.max === Infinity ? 999999999999 : range.max)) return false;
       // Facilities
       if (hasAC && !r.hasAC) return false;
       if (hasBalcony && !r.hasBalcony) return false;

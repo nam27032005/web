@@ -12,12 +12,13 @@ interface RoomCardProps {
 export function RoomCard({ room, showStatus = false }: RoomCardProps) {
   const { isAuthenticated } = useAuth();
   const { favorites, toggleFavorite, reviews } = useApp();
-  const isFavorite = favorites.includes(room.id);
+  const isFavorite = favorites.includes(String(room.id));
+  const canFavorite = isAuthenticated && useAuth().isRole("renter");
 
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!isAuthenticated) return;
-    toggleFavorite(room.id);
+    toggleFavorite(String(room.id));
   };
 
   const roomReviews = reviews.filter((r) => r.roomId === room.id && r.status === "approved");
@@ -51,16 +52,18 @@ export function RoomCard({ room, showStatus = false }: RoomCardProps) {
             </div>
           )}
           {/* Favorite button */}
-          <button
-            onClick={handleFavorite}
-            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all focus:outline-none ${
-              isFavorite
-                ? "bg-red-500 text-white"
-                : "bg-white/90 dark:bg-gray-800/90 text-gray-400 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 backdrop-blur-sm"
-            }`}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-          </button>
+          {canFavorite && (
+            <button
+              onClick={handleFavorite}
+              className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all focus:outline-none ${
+                isFavorite
+                  ? "bg-red-500 text-white"
+                  : "bg-white/90 dark:bg-gray-800/90 text-gray-400 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 backdrop-blur-sm"
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+            </button>
+          )}
           {/* Post status badge (for owner view) */}
           {showStatus && (
             <div className="absolute bottom-3 left-3">

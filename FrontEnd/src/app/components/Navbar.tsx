@@ -15,10 +15,14 @@ import {
   Building2,
   Moon,
   Sun,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
+import { getUserAvatar } from "../data/mockData";
+import { ChatSidebar } from "./ChatSidebar";
+import { ChatWindow } from "./ChatWindow";
 
 export function Navbar() {
   const { currentUser, logout, isAuthenticated, isRole } = useAuth();
@@ -29,11 +33,14 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
 
   const notifications = currentUser
-    ? getNotificationsForUser(currentUser.id)
+    ? getNotificationsForUser(String(currentUser.id))
     : [];
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const { conversations } = useApp();
+  const chatUnreadCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   const handleLogout = () => {
     logout();
@@ -44,7 +51,7 @@ export function Navbar() {
   const handleNotifOpen = () => {
     setNotifOpen((v) => !v);
     if (currentUser && !notifOpen) {
-      markAllNotificationsRead(currentUser.id);
+      markAllNotificationsRead(String(currentUser.id));
     }
   };
 
@@ -107,6 +114,21 @@ export function Navbar() {
 
             {isAuthenticated ? (
               <>
+                {/* Chat */}
+                <div className="relative">
+                  <button
+                    onClick={() => setChatSidebarOpen(true)}
+                    className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5 text-gray-600" />
+                    {chatUnreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 bg-emerald-600 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white">
+                        {chatUnreadCount > 9 ? "9+" : chatUnreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 {/* Notifications */}
                 <div className="relative">
                   <button
@@ -155,7 +177,7 @@ export function Navbar() {
                     className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full pl-1 pr-3 py-1 transition-colors"
                   >
                     <img
-                      src={currentUser?.avatar}
+                      src={getUserAvatar(currentUser)}
                       alt={currentUser?.name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
@@ -273,6 +295,8 @@ export function Navbar() {
           </div>
         </div>
       )}
+      {chatSidebarOpen && <ChatSidebar onClose={() => setChatSidebarOpen(false)} />}
+      <ChatWindow />
     </nav>
   );
 }

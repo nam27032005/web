@@ -1,84 +1,58 @@
 const Notification = require('../models/Notification');
 
-/**
- * GET /api/notifications        – Lấy thông báo của user đang đăng nhập
- * Query: read=true|false, page, limit
- */
-exports.getNotifications = async (req, res, next) => {
+// GET /api/notifications
+exports.getNotifications = async (req, res) => {
   try {
-    const filter = { userId: req.user._id };
-    if (req.query.read !== undefined) filter.read = req.query.read === 'true';
-
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-
-    const [notifications, total, unread] = await Promise.all([
-      Notification.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-      Notification.countDocuments(filter),
-      Notification.countDocuments({ userId: req.user._id, read: false }),
-    ]);
-
-    res.json({ success: true, total, unread, notifications });
+    const notifications = await Notification.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, notifications });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/notifications/:id/read   – Đánh dấu một thông báo đã đọc
- */
-exports.markRead = async (req, res, next) => {
+// PUT /api/notifications/:id/read
+exports.markRead = async (req, res) => {
   try {
-    await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
-      { read: true }
-    );
-    res.json({ success: true });
+    const notif = await Notification.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!notif) return res.status(404).json({ success: false, message: 'Không tìm thấy.' });
+    await notif.update({ read: true });
+    res.json({ success: true, notification: notif });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/notifications/read-all  – Đánh dấu tất cả đã đọc
- */
-exports.markAllRead = async (req, res, next) => {
+// PUT /api/notifications/read-all
+exports.markAllRead = async (req, res) => {
   try {
-    await Notification.updateMany({ userId: req.user._id, read: false }, { read: true });
-    res.json({ success: true, message: 'Đã đánh dấu tất cả thông báo đã đọc.' });
+    await Notification.update({ read: true }, { where: { userId: req.user.id } });
+    res.json({ success: true, message: 'Đã đánh dấu tất cả là đã đọc.' });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * POST /api/notifications          – Tạo thông báo (internal / admin)
- * Body: { userId, title, message, type }
- */
-exports.createNotification = async (req, res, next) => {
+// DELETE /api/notifications/:id
+exports.deleteNotification = async (req, res) => {
   try {
-    const { userId, title, message, type } = req.body;
-    const notif = await Notification.create({ userId, title, message, type });
+    await Notification.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    res.json({ success: true, message: 'Đã xóa.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/notifications (internal/admin create)
+exports.createNotification = async (req, res) => {
+  try {
+    const Notification = require('../models/Notification');
+    const { userId, title, content, type, relatedId, relatedModel } = req.body;
+    const notif = await Notification.create({ userId, title, content, type, relatedId, relatedModel });
     res.status(201).json({ success: true, notification: notif });
   } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * DELETE /api/notifications/:id    – Xóa một thông báo
- */
-exports.deleteNotification = async (req, res, next) => {
-  try {
-    const notif = await Notification.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
-    if (!notif) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy thông báo hoặc bạn không có quyền xóa.' });
-    }
-    res.json({ success: true, message: 'Đã xóa thông báo.' });
-  } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };

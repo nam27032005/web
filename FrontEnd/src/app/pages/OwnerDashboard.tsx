@@ -36,20 +36,24 @@ import {
   formatDateTime
 } from "../data/mockData";
 import { CreateListingModal } from "./CreateListingModal";
+import { EditRoomModal } from "./EditRoomModal";
 
 type DashboardTab = "listings" | "create" | "stats" | "notifications";
 
 export function OwnerDashboard() {
   const { currentUser } = useAuth();
-  const { rooms, updateRoom, loadRooms, notifications, getNotificationsForUser, deleteNotification, markNotificationRead } =
+  const { rooms, myRooms, updateRoom, loadRooms, loadMyRooms, notifications, getNotificationsForUser, deleteNotification, markNotificationRead } =
     useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DashboardTab>("listings");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
   useEffect(() => {
-    loadRooms();
-  }, [loadRooms]);
+    loadMyRooms();
+    const interval = setInterval(loadMyRooms, 10000); // Auto refresh every 10s
+    return () => clearInterval(interval);
+  }, [loadMyRooms]);
 
   if (!currentUser || currentUser.role !== "owner") {
     return (
@@ -62,11 +66,8 @@ export function OwnerDashboard() {
     );
   }
 
-  const myRooms = rooms.filter((r) => {
-    const rOwnerId = typeof r.ownerId === "object" ? (r.ownerId as any)._id || (r.ownerId as any).id : r.ownerId;
-    return rOwnerId === currentUser.id || rOwnerId === currentUser._id;
-  });
-  const myNotifs = getNotificationsForUser(currentUser.id);
+  // In using dedicated myRooms from AppContext
+  const myNotifs = getNotificationsForUser(String(currentUser.id));
   const unreadNotifs = myNotifs.filter((n) => !n.read).length;
 
 
@@ -81,7 +82,7 @@ export function OwnerDashboard() {
   };
 
   const handleStatusToggle = async (room: Room) => {
-    await updateRoom(room._id || room.id, {
+    await updateRoom(String(room._id || room.id), {
       status: room.status === "available" ? "rented" : "available",
     });
   };
@@ -247,11 +248,12 @@ export function OwnerDashboard() {
                           >
                             <Eye className="w-3 h-3" />Xem
                           </Link>
-                          {room.postStatus === "pending" && (
-                            <button className="flex items-center gap-1 text-xs text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-lg hover:bg-blue-50">
-                              <Edit className="w-3 h-3" />Chỉnh sửa
-                            </button>
-                          )}
+                          <button 
+                            onClick={() => setEditingRoom(room)}
+                            className="flex items-center gap-1 text-xs text-blue-600 border border-blue-200 px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit className="w-3 h-3" />Chỉnh sửa
+                          </button>
                           {room.postStatus === "approved" && (
                             <button
                               onClick={() => handleStatusToggle(room)}
@@ -358,7 +360,7 @@ export function OwnerDashboard() {
                 myNotifs.map((notif) => (
                   <div
                     key={notif._id || notif.id}
-                    onClick={() => !notif.read && markNotificationRead(notif._id || notif.id)}
+                    onClick={() => !notif.read && markNotificationRead(String(notif._id || notif.id))}
                     className={`p-5 border-b border-gray-50 dark:border-gray-700 last:border-0 group cursor-pointer transition-all ${
                       !notif.read ? "bg-emerald-50/50 dark:bg-emerald-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-900/50"
                     }`}
@@ -380,7 +382,7 @@ export function OwnerDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteNotification(notif._id || notif.id);
+                          deleteNotification(String(notif._id || notif.id));
                         }}
                         className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                       >
@@ -399,9 +401,16 @@ export function OwnerDashboard() {
       {showCreateModal && (
         <CreateListingModal
           onClose={() => setShowCreateModal(false)}
-          ownerId={currentUser.id}
+          ownerId={String(currentUser.id)}
           ownerName={currentUser.name}
           ownerPhone={currentUser.phone}
+        />
+      )}
+      {/* Edit Listing Modal */}
+      {editingRoom && (
+        <EditRoomModal
+          room={editingRoom}
+          onClose={() => setEditingRoom(null)}
         />
       )}
     </div>

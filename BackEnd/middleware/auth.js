@@ -12,7 +12,7 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Bạn chưa đăng nhập.' });
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const user = await User.findByPk(decoded.id);
     if (!user) {
       return res.status(401).json({ success: false, message: 'Tài khoản không tồn tại.' });
     }
@@ -34,7 +34,7 @@ exports.authorize = (...roles) => (req, res, next) => {
   next();
 };
 
-/** Xác thực JWT tùy chọn – đính kèm user vào req.user nếu có token hợp lệ */
+/** Xác thực JWT tùy chọn */
 exports.protectOptional = async (req, res, next) => {
   try {
     let token;
@@ -43,12 +43,11 @@ exports.protectOptional = async (req, res, next) => {
     }
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id);
+      const user = await User.findByPk(decoded.id);
       if (user) req.user = user;
     }
     next();
   } catch {
-    // Nếu token lỗi thì coi như không đăng nhập, vẫn cho đi tiếp
     next();
   }
 };

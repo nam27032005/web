@@ -3,23 +3,33 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Lỗi máy chủ nội bộ.';
 
-  // Mongoose: duplicate key (email trùng)
-  if (err.code === 11000) {
+  // Sequelize: duplicate entry (unique constraint)
+  if (err.name === 'SequelizeUniqueConstraintError') {
     statusCode = 400;
-    const field = Object.keys(err.keyValue)[0];
+    const field = err.errors?.[0]?.path || 'field';
     message = `${field} đã tồn tại trong hệ thống.`;
   }
 
-  // Mongoose: validation error
-  if (err.name === 'ValidationError') {
+  // Sequelize: validation error
+  if (err.name === 'SequelizeValidationError') {
     statusCode = 400;
-    message = Object.values(err.errors).map((e) => e.message).join(', ');
+    message = err.errors.map((e) => e.message).join(', ');
   }
 
-  // Mongoose: invalid ObjectId
-  if (err.name === 'CastError') {
-    statusCode = 404;
-    message = 'Không tìm thấy tài nguyên.';
+  // Sequelize: foreign key / database error
+  if (err.name === 'SequelizeDatabaseError') {
+    statusCode = 400;
+    message = 'Lỗi truy vấn cơ sở dữ liệu.';
+  }
+
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    message = 'Token không hợp lệ.';
+  }
+  if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Token đã hết hạn.';
   }
 
   if (process.env.NODE_ENV === 'development') {

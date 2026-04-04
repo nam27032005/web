@@ -1,52 +1,25 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const userSchema = new mongoose.Schema(
-  {
-    role: {
-      type: String,
-      enum: ['renter', 'owner', 'admin'],
-      default: 'renter',
-    },
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true, minlength: 6, select: false },
-    phone: { type: String, default: '' },
-    gender: { 
-      type: String, 
-      enum: ['nam', 'nữ', 'khác'], 
-      default: 'khác' 
-    },
-    avatar: {
-      type: String,
-    },
-    address: { type: String },
-    cccd: { type: String },
-    verified: { type: Boolean, default: false }, // owner: đã được admin xác nhận
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
-    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Room' }],
-  },
-  { timestamps: true }
-);
-
-// Hash mật khẩu trước khi lưu
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+const User = sequelize.define('User', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  name: { type: DataTypes.STRING(100), allowNull: false },
+  email: { type: DataTypes.STRING(150), allowNull: false, unique: 'users_email_unique' },
+  password: { type: DataTypes.STRING(255), allowNull: false },
+  phone: { type: DataTypes.STRING(20), defaultValue: null },
+  gender: { type: DataTypes.ENUM('nam', 'nữ', 'khác'), defaultValue: null },
+  address: { type: DataTypes.STRING(255), defaultValue: null },
+  avatar: { type: DataTypes.TEXT('long'), defaultValue: null },
+  role: { type: DataTypes.ENUM('admin', 'owner', 'renter'), defaultValue: 'renter' },
+  verified: { type: DataTypes.BOOLEAN, defaultValue: false },
+  ownerVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
+  active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  favorites: { type: DataTypes.JSON, defaultValue: [] },
+  resetPasswordToken: { type: DataTypes.STRING(255), defaultValue: null },
+  resetPasswordExpires: { type: DataTypes.DATE, defaultValue: null },
+}, {
+  tableName: 'users',
+  timestamps: true,
 });
 
-// So sánh mật khẩu
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-// Ẩn password khi trả JSON
-userSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
-};
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

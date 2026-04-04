@@ -1,19 +1,63 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { User, Phone, Mail, MapPin, Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Camera } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import api from "../../lib/api";
+import { getUserAvatar, Room, ROOM_TYPE_LABELS, formatPrice } from "../data/mockData";
 
 export function ProfilePage() {
   const { currentUser, updateUser, logout } = useAuth();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [viewUser, setViewUser] = useState<any>(null);
+  const [viewUserRooms, setViewUserRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(!!id);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
-    name: currentUser?.name || "",
-    phone: currentUser?.phone || "",
+    name: "",
+    phone: "",
+    gender: "khác" as "nam" | "nữ" | "khác",
   });
+
+  const isMe = !id || String(id) === String(currentUser?.id) || String(id) === String(currentUser?._id);
+
+  useEffect(() => {
+    if (isMe && currentUser) {
+      setForm({
+        name: currentUser.name || "",
+        phone: currentUser.phone || "",
+        gender: currentUser.gender || "khác",
+      });
+    }
+  }, [isMe, currentUser]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (isMe) return;
+      try {
+        setLoading(true);
+        const res = await api.get(`/users/${id}`);
+        if (res.data.success) {
+          setViewUser(res.data.user);
+          // Fetch rooms if they are an owner
+          if (res.data.user.role === "owner") {
+            const roomRes = await api.get(`/rooms?ownerId=${id}`);
+            if (roomRes.data.success) setViewUserRooms(roomRes.data.rooms);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [id, isMe]);
+
+  const user = isMe ? currentUser : viewUser;
+
   const [pwForm, setPwForm] = useState({ old: "", new: "", confirm: "" });
   const [showPw, setShowPw] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -22,7 +66,26 @@ export function ProfilePage() {
   const [pwSuccess, setPwSuccess] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
-  if (!currentUser) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+      </div>
+    );
+  }
+
+  if (!user && !isMe) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">Không tìm thấy người dùng này.</p>
+          <Link to="/" className="text-emerald-600 hover:underline">Về trang chủ</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser && isMe) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -33,18 +96,19 @@ export function ProfilePage() {
     );
   }
 
-  const isOwnerVerified = currentUser.role === "owner" && currentUser.verified;
+  const isOwnerVerified = user?.role === "owner" && user?.verified;
 
   // ── Lưu thông tin gọi API thật ──────────────────────────────
   const handleSave = async () => {
     setSaveError("");
     try {
-      const res = await api.put(`/users/${currentUser.id}`, {
+      const res = await api.put(`/users/${currentUser?.id}`, {
         name: form.name,
         phone: form.phone,
+        gender: form.gender,
       });
       if (res.data.success) {
-        updateUser({ name: form.name, phone: form.phone });
+        updateUser({ name: form.name, phone: form.phone, gender: form.gender });
         setEditing(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
@@ -67,12 +131,12 @@ export function ProfilePage() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
-      try {
-        const res = await api.put(`/users/${currentUser.id}`, { avatar: base64 });
-        if (res.data.success) {
-          updateUser({ avatar: base64 });
-        }
-      } catch (err) {
+    try {
+      const res = await api.put(`/users/${currentUser?.id}`, { avatar: base64 });
+      if (res.data.success) {
+        updateUser({ avatar: base64 });
+      }
+    } catch (err) {
         alert("Lỗi cập nhật ảnh. Vui lòng thử lại.");
       } finally {
         setAvatarLoading(false);
@@ -127,16 +191,16 @@ export function ProfilePage() {
   };
 
   const roleLabel =
-    currentUser.role === "admin"
+    user?.role === "admin"
       ? "Quản trị viên"
-      : currentUser.role === "owner"
+      : user?.role === "owner"
       ? "Chủ nhà trọ"
       : "Người thuê trọ";
 
   const roleColor =
-    currentUser.role === "admin"
+    user?.role === "admin"
       ? "bg-purple-100 text-purple-700"
-      : currentUser.role === "owner"
+      : user?.role === "owner"
       ? "bg-blue-100 text-blue-700"
       : "bg-green-100 text-green-700";
 
@@ -156,34 +220,38 @@ export function ProfilePage() {
             <div className="relative flex-shrink-0">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-emerald-100">
                 <img
-                  src={currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=059669&color=fff`}
-                  alt={currentUser.name}
+                  src={getUserAvatar(user)}
+                  alt={user?.name}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={avatarLoading}
-                className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-md transition-colors disabled:opacity-50"
-                title="Đổi ảnh đại diện"
-              >
-                {avatarLoading
-                  ? <div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" />
-                  : <Camera className="w-3.5 h-3.5" />}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-              />
+              {isMe && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarLoading}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center shadow-md transition-colors disabled:opacity-50"
+                  title="Đổi ảnh đại diện"
+                >
+                  {avatarLoading
+                    ? <div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" />
+                    : <Camera className="w-3.5 h-3.5" />}
+                </button>
+              )}
+              {isMe && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              )}
             </div>
 
             <div>
-              <h2 className="font-bold text-gray-900 dark:text-white text-lg">{currentUser.name}</h2>
+              <h2 className="font-bold text-gray-900 dark:text-white text-lg">{user?.name}</h2>
               <span className={`text-xs px-2.5 py-0.5 rounded-full ${roleColor}`}>{roleLabel}</span>
-              {currentUser.role === "owner" && (
+              {user?.role === "owner" && (
                 <div className="mt-1">
                   {isOwnerVerified ? (
                     <span className="flex items-center gap-1 text-xs text-green-600">
@@ -224,7 +292,7 @@ export function ProfilePage() {
                 />
               ) : (
                 <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100 py-2">
-                  <User className="w-4 h-4 text-gray-400" />{currentUser.name}
+                  <User className="w-4 h-4 text-gray-400" />{user?.name}
                 </div>
               )}
             </div>
@@ -232,8 +300,8 @@ export function ProfilePage() {
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Email</label>
               <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100 py-2">
-                <Mail className="w-4 h-4 text-gray-400" />{currentUser.email}
-                <span className="text-xs text-gray-400">(Không thể thay đổi)</span>
+                <Mail className="w-4 h-4 text-gray-400" />{user?.email}
+                {isMe && <span className="text-xs text-gray-400">(Không thể thay đổi)</span>}
               </div>
             </div>
 
@@ -248,7 +316,34 @@ export function ProfilePage() {
                 />
               ) : (
                 <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100 py-2">
-                  <Phone className="w-4 h-4 text-gray-400" />{currentUser.phone}
+                  <Phone className="w-4 h-4 text-gray-400" />{user?.phone}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Giới tính</label>
+              {editing ? (
+                <div className="flex gap-4 py-2">
+                  {["nam", "nữ", "khác"].map((g) => (
+                    <label key={g} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value={g}
+                        checked={form.gender === g}
+                        onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as any }))}
+                        className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 pointer-events-none"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 capitalize group-hover:text-emerald-600 transition-colors">
+                        {g}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-900 dark:text-gray-100 py-2 capitalize">
+                  {user?.gender || "Chưa xác định"}
                 </div>
               )}
             </div>
@@ -257,111 +352,126 @@ export function ProfilePage() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Địa chỉ thường trú</label>
                 <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100 py-2">
-                  <MapPin className="w-4 h-4 text-gray-400" />{currentUser.address}
+                  <MapPin className="w-4 h-4 text-gray-400" />{user?.address}
                 </div>
               </div>
             )}
           </div>
 
-          {isOwnerVerified ? (
-            <p className="text-xs text-amber-600 mt-4 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              Tài khoản đã xác nhận. Liên hệ 7 Trọ để chỉnh sửa thông tin.
-            </p>
-          ) : (
-            <div className="flex gap-2 mt-4">
-              {editing ? (
-                <>
-                  <button onClick={handleSave} className="bg-emerald-600 text-white text-sm px-4 py-2 rounded-xl hover:bg-emerald-700">
-                    Lưu thay đổi
-                  </button>
-                  <button onClick={() => setEditing(false)} className="text-sm text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700">
-                    Hủy
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => setEditing(true)} className="text-sm text-emerald-600 border border-emerald-300 px-4 py-2 rounded-xl hover:bg-emerald-50">
-                  Chỉnh sửa thông tin
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Change Password */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Lock className="w-4 h-4" />Đổi mật khẩu
-          </h3>
-
-          {pwSuccess && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 mb-4">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-              <p className="text-sm text-emerald-700">Mật khẩu đã được đổi thành công.</p>
-            </div>
-          )}
-          {pwError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-              <p className="text-sm text-red-600">{pwError}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleChangePw} className="space-y-3">
-            {[
-              { label: "Mật khẩu hiện tại", key: "old" },
-              { label: "Mật khẩu mới", key: "new" },
-              { label: "Xác nhận mật khẩu mới", key: "confirm" },
-            ].map((field) => (
-              <div key={field.key}>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{field.label}</label>
-                <div className="relative">
-                  <input
-                    type={showPw ? "text" : "password"}
-                    value={pwForm[field.key as keyof typeof pwForm]}
-                    onChange={(e) => setPwForm((p) => ({ ...p, [field.key]: e.target.value }))}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl px-4 py-3 pr-11 outline-none focus:border-emerald-500"
-                  />
-                  {field.key === "old" && (
-                    <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {isMe && (
+            isOwnerVerified ? (
+              <p className="text-xs text-amber-600 mt-4 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Tài khoản đã xác nhận. Liên hệ 7 Trọ để chỉnh sửa thông tin.
+              </p>
+            ) : (
+              <div className="flex gap-2 mt-4">
+                {editing ? (
+                  <>
+                    <button onClick={handleSave} className="bg-emerald-600 text-white text-sm px-4 py-2 rounded-xl hover:bg-emerald-700">
+                      Lưu thay đổi
                     </button>
-                  )}
-                </div>
-                {field.key === "new" && pwForm.new.length > 0 && (
-                  <div className="mt-2 text-xs">
-                    <div className="flex gap-1 mb-1.5">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                            getPasswordStrength(pwForm.new) >= level
-                              ? getStrengthColor(getPasswordStrength(pwForm.new))
-                              : "bg-gray-200 dark:bg-gray-700"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
-                      Yêu cầu: ≥ 8 ký tự, chữ hoa, chữ thường, số, ký tự đặc biệt.
-                    </p>
-                  </div>
+                    <button onClick={() => setEditing(false)} className="text-sm text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700">
+                      Hủy
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setEditing(true)} className="text-sm text-emerald-600 border border-emerald-300 px-4 py-2 rounded-xl hover:bg-emerald-50">
+                    Chỉnh sửa thông tin
+                  </button>
                 )}
               </div>
-            ))}
-            <button type="submit" className="bg-emerald-600 text-white text-sm px-5 py-2.5 rounded-xl hover:bg-emerald-700 font-medium">
-              Đổi mật khẩu
-            </button>
-          </form>
+            )
+          )}
         </div>
 
-        {/* Logout */}
-        <button
-          onClick={() => { logout(); navigate("/"); }}
-          className="w-full text-red-600 border border-red-200 py-3 rounded-2xl text-sm font-medium hover:bg-red-50 transition-colors"
-        >
-          Đăng xuất
-        </button>
+        {/* Rooms Posted (for owners) */}
+        {!isMe && user?.role === "owner" && (
+           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Các bài đăng của {user.name}</h3>
+             <div className="space-y-3">
+               {viewUserRooms.length === 0 ? (
+                 <p className="text-center text-gray-500 text-sm py-4">Chưa có bài đăng nào.</p>
+               ) : (
+                 viewUserRooms.map(room => (
+                   <Link key={room.id} to={`/room/${room.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                     <img src={room.images[0]} className="w-12 h-10 object-cover rounded-lg" alt="" />
+                     <div className="flex-1 min-w-0">
+                       <p className="text-sm font-medium text-gray-900 truncate">{room.title}</p>
+                       <p className="text-xs text-emerald-600 font-bold">{formatPrice(room.price)}/tháng</p>
+                     </div>
+                   </Link>
+                 ))
+               )}
+             </div>
+           </div>
+        )}
+
+        {isMe && (
+          <>
+            {/* Change Password */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Lock className="w-4 h-4" />Đổi mật khẩu
+              </h3>
+              {/* ... password fields ... */}
+              <form onSubmit={handleChangePw} className="space-y-3">
+                {[
+                  { label: "Mật khẩu hiện tại", key: "old" },
+                  { label: "Mật khẩu mới", key: "new" },
+                  { label: "Xác nhận mật khẩu mới", key: "confirm" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{field.label}</label>
+                    <div className="relative">
+                      <input
+                        type={showPw ? "text" : "password"}
+                        value={pwForm[field.key as keyof typeof pwForm]}
+                        onChange={(e) => setPwForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                        className="w-full text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl px-4 py-3 pr-11 outline-none focus:border-emerald-500"
+                      />
+                      {field.key === "old" && (
+                        <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                    {field.key === "new" && pwForm.new.length > 0 && (
+                      <div className="mt-2 text-xs">
+                        <div className="flex gap-1 mb-1.5">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <div
+                              key={level}
+                              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                getPasswordStrength(pwForm.new) >= level
+                                  ? getStrengthColor(getPasswordStrength(pwForm.new))
+                                  : "bg-gray-200 dark:bg-gray-700"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">
+                          Yêu cầu: ≥ 8 ký tự, chữ hoa, chữ thường, số, ký tự đặc biệt.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <button type="submit" className="bg-emerald-600 text-white text-sm px-5 py-2.5 rounded-xl hover:bg-emerald-700 font-medium">
+                  Đổi mật khẩu
+                </button>
+              </form>
+            </div>
+
+            {/* Logout */}
+            <button
+              onClick={() => { logout(); navigate("/"); }}
+              className="w-full text-red-600 border border-red-200 py-3 rounded-2xl text-sm font-medium hover:bg-red-50 transition-colors"
+            >
+              Đăng xuất
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

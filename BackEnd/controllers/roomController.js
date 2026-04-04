@@ -1,319 +1,370 @@
-const Room = require('../models/Room');
-const Notification = require('../models/Notification');
-const User = require('../models/User');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db');
+const { Room, User } = require('../models');
 
-/**
- * GET /api/rooms
- * Query: city, district, type, status, postStatus, minPrice, maxPrice,
- *        hasAC, hasBalcony, q (text search), page, limit, sort
- */
-exports.getRooms = async (req, res, next) => {
+// Transform flat address fields → nested address object for FrontEnd
+const transformRoom = (room) => {
+  if (!room) return null;
+  const r = room.toJSON ? room.toJSON() : { ...room };
+  r.id = r.id || r._id;
+  r._id = r.id; 
+  r.address = {
+    street: r.address_street || '',
+    ward: r.address_ward || '',
+    district: r.address_district || '',
+    city: r.address_city || '',
+    full: r.address_full || '',
+  };
+  r.bathroom = {
+    type: r.bathroom_type || 'private',
+    hasHotWater: !!r.bathroom_hasHotWater,
+  };
+  // Ensure images, amenities, nearBy are arrays
+  const ensureArray = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val || '[]'); } catch { return []; }
+    }
+    return [];
+  };
+  r.images = ensureArray(r.images);
+  r.amenities = ensureArray(r.amenities);
+  r.nearBy = ensureArray(r.nearBy);
+  // Ensure owner object exists and has name/phone
+  if (!r.owner || Object.keys(r.owner).length === 0) {
+    r.owner = { name: r.ownerName || 'Chủ nhà', phone: r.ownerPhone || '' };
+  }
+  return r;
+};
+
+// GET /api/rooms
+const getRooms = async (req, res) => {
   try {
     const {
-      city, district, type, status,
-      minPrice, maxPrice, hasAC, hasBalcony, q,
-      page = 1, limit = 12, sort = '-createdAt',
-      postStatus, ownerId
+      page = 1, limit = 10, search, minPrice, maxPrice,
+      roomType, city, district, status, allStatus
     } = req.query;
-
-    const filter = {};
-
-    // 1. Basic Filters
-    if (city) filter['address.city'] = { $regex: city, $options: 'i' };
-    if (district) filter['address.district'] = { $regex: district, $options: 'i' };
-    if (type) filter.roomType = type;
-    if (status) filter.status = status;
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
-    }
-    if (hasAC === 'true') filter.hasAC = true;
-    if (hasBalcony === 'true') filter.hasBalcony = true;
-    if (q) filter.$text = { $search: q };
-
-    // 2. Visibility & Logic
-    if (!req.user || req.user.role !== 'admin') {
-      // Common user visibility
-      if (ownerId) {
-        // If ownerId is provided, check if it's the current user
-        if (req.user && req.user._id.toString() === ownerId) {
-          if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
-          filter.ownerId = ownerId;
-        } else {
-          // Others can only see approved
-          filter.ownerId = ownerId;
-          filter.postStatus = 'approved';
-        }
-      } else {
-        // Root list
-        if (postStatus && postStatus !== 'all') {
-          if (postStatus === 'approved') {
-            filter.postStatus = 'approved';
-          } else if (req.user) {
-            // Can see non-approved only for themselves
-            filter.postStatus = postStatus;
-            filter.ownerId = req.user._id;
-          } else {
-            filter.postStatus = 'approved';
-          }
-        } else {
-          if (req.user) {
-            filter.$or = [{ postStatus: 'approved' }, { ownerId: req.user._id }];
-          } else {
-            filter.postStatus = 'approved';
-          }
-        }
-      }
+    
+    const where = {};
+    
+    // Nếu muốn hiển thị tất cả status (chỉ dành cho admin)
+    if (allStatus === 'true' && req.user && req.user.role === 'admin') {
+      // Bỏ qua lọc postStatus
     } else {
-      // Admin sees everything as requested
-      if (postStatus && postStatus !== 'all') filter.postStatus = postStatus;
-      if (ownerId) filter.ownerId = ownerId;
+      where.postStatus = 'approved'; // Mặc định chỉ hiển thị đã duyệt
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const [rooms, total] = await Promise.all([
-      Room.find(filter).sort(sort).skip(skip).limit(Number(limit)),
-      Room.countDocuments(filter),
-    ]);
+    if (search) where.title = { [Op.like]: `%${search}%` };
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price[Op.gte] = minPrice;
+      if (maxPrice) where.price[Op.lte] = maxPrice;
+    }
+    if (roomType) where.roomType = roomType;
+    if (city) where.address_city = { [Op.like]: `%${city}%` };
+    if (district) where.address_district = { [Op.like]: `%${district}%` };
+    if (status) where.status = status;
+
+    const { count, rows } = await Room.findAndCountAll({
+      where,
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar', 'gender'],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: (parseInt(page) - 1) * parseInt(limit),
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, total: count, page: +page, rooms: rows.map(transformRoom) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/rooms/:id
+const getRoomById = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar', 'gender'],
+        },
+      ],
+    });
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+
+    // Không expose phòng pending/rejected trừ admin/chủ phòng
+    const isOwner = req.user && req.user.id === room.ownerId;
+    const isAdmin = req.user && req.user.role === 'admin';
+    if (room.postStatus !== 'approved' && !isOwner && !isAdmin) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+
+    res.json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/rooms
+const createRoom = async (req, res) => {
+  try {
+    const room = await Room.create({ ...req.body, ownerId: req.user.id });
+    res.status(201).json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/rooms/:id
+const updateRoom = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    if (room.ownerId !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    await room.update(req.body);
+    res.json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE /api/rooms/:id
+const deleteRoom = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    if (room.ownerId !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    await room.destroy();
+    res.json({ success: true, message: 'Room deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/rooms/owner — rooms của owner đang login (legacy, kept for compat)
+const getOwnerRooms = async (req, res) => {
+  try {
+    // Increase sort buffer size for session to handle large Base64 data
+    await sequelize.query('SET SESSION sort_buffer_size = 1048576 * 16;'); 
+    const rooms = await Room.findAll({
+      where: { ownerId: req.user.id },
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar', 'gender'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, rooms: rooms.map(transformRoom) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/rooms/my-rooms — alias chuẩn theo spec
+const getMyRooms = async (req, res) => {
+  try {
+    // Increase sort buffer size for session to handle large Base64 data
+    await sequelize.query('SET SESSION sort_buffer_size = 1048576 * 16;');
+    const rooms = await Room.findAll({
+      where: { ownerId: req.user.id },
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar', 'gender'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, rooms: rooms.map(transformRoom).filter(Boolean) });
+  } catch (err) {
+    console.error('getMyRooms Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/rooms/pending
+const getPendingRooms = async (req, res) => {
+  try {
+    const rooms = await Room.findAll({
+      where: { postStatus: 'pending' },
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['id', 'name', 'email', 'phone', 'avatar'],
+        },
+      ],
+      order: [['createdAt', 'ASC']],
+    });
+    res.json({ success: true, rooms: rooms.map(transformRoom) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PATCH /api/rooms/:id/approve
+const approveRoom = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    await room.update({ postStatus: 'approved' });
+    res.json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PATCH /api/rooms/:id/reject
+const rejectRoom = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    await room.update({ postStatus: 'rejected', rejectReason: req.body.reason || '' });
+    res.json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/rooms/:id/views
+const incrementViews = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    await room.increment('views');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/rooms/:id/status
+const updateRoomStatus = async (req, res) => {
+  try {
+    const room = await Room.findByPk(req.params.id);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+    if (room.ownerId !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    await room.update({ status: req.body.status });
+    res.json({ success: true, room: transformRoom(room) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/rooms/:id/favorite  { action: "add" | "remove" }
+const toggleFavorite = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const roomId = parseInt(req.params.id);
+    const { action } = req.body; // "add" | "remove" | undefined (toggle)
+
+    // Kiểm tra phòng tồn tại
+    const room = await Room.findByPk(roomId);
+    if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
+
+    // Kiểm tra đã favorite chưa (dùng bảng user_favorites)
+    const [existing] = await sequelize.query(
+      'SELECT id FROM user_favorites WHERE userId = ? AND roomId = ?',
+      { replacements: [userId, roomId], type: sequelize.QueryTypes.SELECT }
+    );
+
+    const isCurrentlyFav = !!existing;
+    const shouldAdd = action === 'add' ? true : action === 'remove' ? false : !isCurrentlyFav;
+
+    if (shouldAdd && !isCurrentlyFav) {
+      await sequelize.query(
+        'INSERT INTO user_favorites (userId, roomId, createdAt) VALUES (?, ?, NOW())',
+        { replacements: [userId, roomId] }
+      );
+    } else if (!shouldAdd && isCurrentlyFav) {
+      await sequelize.query(
+        'DELETE FROM user_favorites WHERE userId = ? AND roomId = ?',
+        { replacements: [userId, roomId] }
+      );
+    }
+
+    // Lấy danh sách mới nhất các IDs mà user đã thích
+    const favs = await sequelize.query(
+      'SELECT roomId FROM user_favorites WHERE userId = ?',
+      { replacements: [userId], type: sequelize.QueryTypes.SELECT }
+    );
+
+    // Lấy số lượng yêu thích mới của phòng này
+    const [countRes] = await sequelize.query(
+      'SELECT COUNT(*) as count FROM user_favorites WHERE roomId = ?',
+      { replacements: [roomId], type: sequelize.QueryTypes.SELECT }
+    );
 
     res.json({
       success: true,
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
-      rooms,
+      isFavorite: shouldAdd,
+      favorites: favs.map(f => String(f.roomId)),
+      favoriteCount: countRes.count || 0
     });
   } catch (err) {
-    next(err);
+    console.error('toggleFavorite:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * GET /api/rooms/:id
- */
-exports.getRoomById = async (req, res, next) => {
+// GET /api/users/me/favorites  — trả về danh sách phòng yêu thích
+const getFavoriteRooms = async (req, res) => {
   try {
-    const room = await Room.findById(req.params.id).populate('ownerId', 'name phone avatar verified');
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-    res.json({ success: true, room });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * POST /api/rooms           – Chủ nhà tạo bài đăng mới
- */
-exports.createRoom = async (req, res, next) => {
-  try {
-    const owner = req.user;
-    if (owner.role !== 'owner') {
-      return res.status(403).json({ success: false, message: 'Chỉ chủ nhà mới được đăng bài.' });
-    }
-
-    // Tính phí đăng tin
-    const feeMap = { week: 50000, month: 200000, quarter: 450000, year: 1500000 };
-    const { displayDuration = 1, displayDurationUnit = 'month' } = req.body;
-    const postFee = displayDuration * (feeMap[displayDurationUnit] || 200000);
-
-    const roomData = { ...req.body };
-    delete roomData.id;
-    delete roomData._id;
-
-    const room = await Room.create({
-      ...roomData,
-      ownerId: owner._id,
-      ownerName: owner.name,
-      ownerPhone: owner.phone,
-      postFee,
-      postStatus: 'pending',
-    });
-
-    // Thông báo cho admin
-    const admins = await User.find({ role: 'admin' });
-    await Notification.insertMany(
-      admins.map((admin) => ({
-        userId: admin._id,
-        title: 'Bài đăng mới chờ duyệt',
-        message: `Chủ nhà ${owner.name} vừa đăng bài "${room.title}". Đang chờ phê duyệt.`,
-        type: 'system',
-      }))
+    const userId = req.user.id;
+    const favs = await sequelize.query(
+      `SELECT r.* FROM rooms r
+       INNER JOIN user_favorites uf ON uf.roomId = r.id
+       WHERE uf.userId = ?
+       ORDER BY uf.createdAt DESC`,
+      { replacements: [userId], type: sequelize.QueryTypes.SELECT }
     );
-
-    res.status(201).json({ success: true, message: 'Đăng bài thành công, đang chờ duyệt.', room });
+    res.json({ success: true, rooms: favs.map(transformRoom) });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/rooms/:id        – Chủ nhà cập nhật bài của mình
- */
-exports.updateRoom = async (req, res, next) => {
+// GET /api/rooms/my-favorite-ids
+const getFavoriteIds = async (req, res) => {
   try {
-    const room = await Room.findById(req.params.id);
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-
-    if (req.user.role !== 'admin' && room.ownerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Không có quyền chỉnh sửa bài này.' });
-    }
-
-    // Khi chỉnh sửa nội dung chính → cần duyệt lại
-    const needsReview = ['title', 'description', 'price', 'images', 'address'].some(
-      (f) => req.body[f] !== undefined
+    const userId = req.user.id;
+    const favs = await sequelize.query(
+      'SELECT roomId FROM user_favorites WHERE userId = ?',
+      { replacements: [userId], type: sequelize.QueryTypes.SELECT }
     );
-    if (needsReview && req.user.role !== 'admin') {
-      req.body.postStatus = 'pending';
-    }
-
-    const updated = await Room.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    res.json({ success: true, message: 'Cập nhật thành công.', room: updated });
+    res.json({ success: true, favorites: favs.map(f => f.roomId) });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * DELETE /api/rooms/:id
- */
-exports.deleteRoom = async (req, res, next) => {
-  try {
-    const room = await Room.findById(req.params.id);
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-
-    if (req.user.role !== 'admin' && room.ownerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Không có quyền xóa bài này.' });
-    }
-
-    await room.deleteOne();
-    res.json({ success: true, message: 'Đã xóa bài đăng.' });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * PUT /api/rooms/:id/approve   – Admin duyệt bài
- */
-exports.approveRoom = async (req, res, next) => {
-  try {
-    const room = await Room.findById(req.params.id);
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-
-    const now = new Date();
-    const expires = new Date(now);
-    const { displayDuration = 1, displayDurationUnit = 'month' } = room;
-    if (displayDurationUnit === 'week') expires.setDate(expires.getDate() + 7 * displayDuration);
-    else if (displayDurationUnit === 'month') expires.setMonth(expires.getMonth() + displayDuration);
-    else if (displayDurationUnit === 'quarter') expires.setMonth(expires.getMonth() + 3 * displayDuration);
-    else expires.setFullYear(expires.getFullYear() + (displayDuration || 1));
-
-    room.postStatus = 'approved';
-    room.approvedAt = now;
-    room.expiresAt = expires;
-    await room.save();
-
-    await Notification.create({
-      userId: room.ownerId,
-      title: 'Bài đăng được duyệt',
-      message: `Bài đăng "${room.title}" đã được phê duyệt. Thời hạn: ${displayDuration} ${displayDurationUnit}. Phí: ${room.postFee.toLocaleString('vi-VN')}đ.`,
-      type: 'approval',
-    });
-
-    res.json({ success: true, message: 'Đã duyệt bài đăng.', room });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * PUT /api/rooms/:id/reject    – Admin từ chối bài
- * Body: { reason }
- */
-exports.rejectRoom = async (req, res, next) => {
-  try {
-    const { reason } = req.body;
-    if (!reason) return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do từ chối.' });
-
-    const room = await Room.findByIdAndUpdate(
-      req.params.id,
-      { postStatus: 'rejected', rejectedReason: reason },
-      { new: true }
-    );
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-
-    await Notification.create({
-      userId: room.ownerId,
-      title: 'Bài đăng bị từ chối',
-      message: `Bài đăng "${room.title}" bị từ chối. Lý do: ${reason}`,
-      type: 'rejection',
-    });
-
-    res.json({ success: true, message: 'Đã từ chối bài đăng.', room });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * PUT /api/rooms/:id/status    – Chủ nhà cập nhật trạng thái (available/rented)
- * Body: { status }
- */
-exports.updateRoomStatus = async (req, res, next) => {
-  try {
-    const { status } = req.body;
-    if (!['available', 'rented'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ.' });
-    }
-    const room = await Room.findByIdAndUpdate(req.params.id, { status }, { new: true });
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-    res.json({ success: true, message: 'Cập nhật trạng thái thành công.', room });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * PUT /api/rooms/:id/views     – Tăng lượt xem (gọi khi vào trang chi tiết)
- */
-exports.incrementViews = async (req, res, next) => {
-  try {
-    await Room.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * POST /api/rooms/:id/favorite – Toggle yêu thích
- * Body: { action: 'add' | 'remove' }
- */
-exports.toggleFavorite = async (req, res, next) => {
-  try {
-    const { action } = req.body; // 'add' or 'remove'
-    const roomId = req.params.id;
-    const userId = req.user._id;
-
-    const room = await Room.findById(roomId);
-    if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
-
-    if (action === 'add') {
-      // Thêm vào mảng favorites của User (cơ chế $addToSet để không trùng)
-      await User.findByIdAndUpdate(userId, { $addToSet: { favorites: roomId } });
-      // Tăng counter trong Room
-      room.favorites += 1;
-    } else {
-      // Xóa khỏi mảng favorites của User
-      await User.findByIdAndUpdate(userId, { $pull: { favorites: roomId } });
-      // Giảm counter trong Room (không để âm)
-      room.favorites = Math.max(0, room.favorites - 1);
-    }
-
-    await room.save();
-    res.json({ success: true, favorites: room.favorites });
-  } catch (err) {
-    next(err);
-  }
+module.exports = {
+  getRooms,
+  getRoomById,
+  createRoom,
+  updateRoom,
+  deleteRoom,
+  getOwnerRooms,
+  getPendingRooms,
+  approveRoom,
+  rejectRoom,
+  incrementViews,
+  updateRoomStatus,
+  toggleFavorite,
+  getMyRooms,
+  getFavoriteRooms,
+  getFavoriteIds,
 };

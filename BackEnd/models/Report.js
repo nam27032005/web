@@ -1,14 +1,16 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const reportSchema = new mongoose.Schema(
-  {
-    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    reason: { type: String, required: true },
-    description: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'resolved'], default: 'pending' },
+const Report = sequelize.define('Report', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  roomId: { type: DataTypes.INTEGER, allowNull: false },
+  userId: { type: DataTypes.INTEGER, allowNull: false },
+  reason: { type: DataTypes.STRING(255) },
+  description: { type: DataTypes.TEXT },
+  status: {
+    type: DataTypes.ENUM('pending', 'resolved', 'rejected'),
+    defaultValue: 'pending',
   },
-  { timestamps: true }
-);
+}, { tableName: 'reports' });
 
-module.exports = mongoose.model('Report', reportSchema);
+module.exports = Report;

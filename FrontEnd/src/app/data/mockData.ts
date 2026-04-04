@@ -8,8 +8,8 @@ export type RoomType = "phong_tro" | "chung_cu_mini" | "nha_nguyen_can" | "chung
 export type RoomStatus = "available" | "rented";
 
 export interface User {
-  id: string;
-  _id?: string;
+  id: string | number;
+  _id?: string | number;
   role: UserRole;
   name: string;
   email: string;
@@ -18,19 +18,20 @@ export interface User {
   address?: string;
   cccd?: string;
   verified?: boolean; // owner: đã được admin xác nhận
+  gender?: "nam" | "nữ" | "khác";
   createdAt: string;
 }
 
 export interface UserCredential {
-  userId: string;
+  userId: string | number;
   email: string;
   passwordHash: string; // trong demo: plain text, production: dùng bcrypt
 }
 
 export interface Room {
-  id: string;
-  _id?: string;
-  ownerId: string;
+  id: string | number;
+  _id?: string | number;
+  ownerId: string | number;
   ownerName: string;
   ownerPhone: string;
   title: string;
@@ -72,12 +73,13 @@ export interface Room {
 }
 
 export interface Review {
-  id: string;
-  _id?: string;
-  roomId: string;
-  userId: string;
+  id: string | number;
+  _id?: string | number;
+  roomId: string | number;
+  userId: string | number;
   userName: string;
   userAvatar: string;
+  userGender?: "nam" | "nữ" | "khác";
   rating: number;
   comment: string;
   status: "pending" | "approved" | "rejected";
@@ -85,9 +87,9 @@ export interface Review {
 }
 
 export interface Notification {
-  id: string;
-  _id?: string;
-  userId: string;
+  id: string | number;
+  _id?: string | number;
+  userId: string | number;
   title: string;
   message: string;
   read: boolean;
@@ -96,21 +98,33 @@ export interface Notification {
 }
 
 export interface ChatMessage {
-  id: string;
-  _id?: string;
-  fromId: string | User;
-  fromName: string;
-  toId: string | User;
-  message: string;
-  timestamp?: string;
-  createdAt?: string;
+  id: string | number;
+  _id?: string | number;
+  conversationId: string | number;
+  senderId: string | number;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string | number;
+  _id?: string | number;
+  tenantId: string | number;
+  ownerId: string | number;
+  roomId?: string | number;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  partner?: User;
+  unreadCount?: number;
+  messages?: ChatMessage[];
 }
 
 export interface Report {
-  id: string;
-  _id?: string;
-  roomId: string;
-  userId: string;
+  id: string | number;
+  _id?: string | number;
+  roomId: string | number;
+  userId: string | number;
   reason: string;
   description: string;
   status: "pending" | "resolved";
@@ -180,6 +194,15 @@ export function formatDateTime(dateStr?: string | Date): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+/**
+ * Lấy ảnh đại diện người dùng. Nếu không có ảnh thì dùng ảnh mặc định theo giới tính.
+ */
+export function getUserAvatar(user?: any): string {
+  if (user?.avatar) return user.avatar;
+  if (user?.gender === "nữ") return "https://cdn-icons-png.flaticon.com/512/3135/3135823.png";
+  return "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 }
 
 // (Đã dọn dẹp biến tạm sau khi migrate sang API MongoDB)

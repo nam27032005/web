@@ -1,20 +1,19 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db');
 
-const reviewSchema = new mongoose.Schema(
-  {
-    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    userName: { type: String, required: true },
-    userAvatar: String,
-    rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true, trim: true },
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
-    },
+const Review = sequelize.define('Review', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  roomId: { type: DataTypes.INTEGER, allowNull: false },
+  userId: { type: DataTypes.INTEGER, allowNull: false },
+  userName: { type: DataTypes.STRING(100) },
+  userAvatar: { type: DataTypes.TEXT },
+  userGender: { type: DataTypes.ENUM('nam', 'nữ', 'khác'), defaultValue: 'khác' },
+  rating: { type: DataTypes.INTEGER, allowNull: false },
+  comment: { type: DataTypes.TEXT },
+  status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending',
   },
-  { timestamps: true }
-);
+}, { tableName: 'reviews' });
 
-module.exports = mongoose.model('Review', reviewSchema);
+module.exports = Review;

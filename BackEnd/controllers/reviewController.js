@@ -1,86 +1,84 @@
-const Review = require('../models/Review');
+const { Review, User, Room } = require('../models');
 
-/**
- * GET /api/reviews?roomId=xxx   – Lấy reviews của phòng (approved)
- * GET /api/reviews?status=pending – Admin xem review chờ duyệt
- */
-exports.getReviews = async (req, res, next) => {
+// GET /api/reviews (All reviews for admin or global state)
+exports.getAllReviews = async (req, res) => {
   try {
-    const filter = {};
-    if (req.query.roomId) filter.roomId = req.query.roomId;
-    if (req.query.status) filter.status = req.query.status;
-    else filter.status = 'approved'; // mặc định chỉ trả approved
-
-    const reviews = await Review.find(filter).sort({ createdAt: -1 });
-    res.json({ success: true, count: reviews.length, reviews });
+    const reviews = await Review.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, reviews });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * POST /api/reviews             – Người thuê gửi đánh giá
- * Body: { roomId, rating, comment }
- */
-exports.createReview = async (req, res, next) => {
+// GET /api/reviews/room/:roomId
+exports.getReviewsByRoom = async (req, res) => {
   try {
-    const { roomId, rating, comment } = req.body;
+    const reviews = await Review.findAll({
+      where: { roomId: req.params.roomId, status: 'approved' },
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, reviews });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/reviews
+exports.createReview = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
     const review = await Review.create({
-      roomId,
-      userId: req.user._id,
-      userName: req.user.name,
-      userAvatar: req.user.avatar,
-      rating,
-      comment,
+      ...req.body,
+      userId: req.user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
+      userGender: user.gender,
       status: 'pending',
     });
-    res.status(201).json({ success: true, message: 'Đánh giá đã gửi, đang chờ duyệt.', review });
+    res.status(201).json({ success: true, review });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/reviews/:id/approve  – Admin duyệt review
- */
-exports.approveReview = async (req, res, next) => {
+// PUT /api/reviews/:id/approve (admin)
+exports.approveReview = async (req, res) => {
   try {
-    const review = await Review.findByIdAndUpdate(req.params.id, { status: 'approved' }, { new: true });
-    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá.' });
-    res.json({ success: true, message: 'Đã duyệt đánh giá.', review });
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Không có quyền.' });
+    const review = await Review.findByPk(req.params.id);
+    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy.' });
+    await review.update({ status: 'approved' });
+    res.json({ success: true, review });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * PUT /api/reviews/:id/reject   – Admin từ chối review
- */
-exports.rejectReview = async (req, res, next) => {
+// DELETE /api/reviews/:id
+exports.deleteReview = async (req, res) => {
   try {
-    const review = await Review.findByIdAndUpdate(req.params.id, { status: 'rejected' }, { new: true });
-    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá.' });
-    res.json({ success: true, message: 'Đã từ chối đánh giá.', review });
+    const review = await Review.findByPk(req.params.id);
+    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy.' });
+    if (review.userId !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Không có quyền.' });
+    await review.destroy();
+    res.json({ success: true, message: 'Đã xóa.' });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * DELETE /api/reviews/:id       – Xóa review (admin hoặc người tạo)
- */
-exports.deleteReview = async (req, res, next) => {
+// PUT /api/reviews/:id/reject (admin)
+exports.rejectReview = async (req, res) => {
   try {
-    const review = await Review.findById(req.params.id);
-    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá.' });
-
-    if (req.user.role !== 'admin' && review.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Không có quyền xóa đánh giá này.' });
-    }
-
-    await review.deleteOne();
-    res.json({ success: true, message: 'Đã xóa đánh giá.' });
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Không có quyền.' });
+    const review = await Review.findByPk(req.params.id);
+    if (!review) return res.status(404).json({ success: false, message: 'Không tìm thấy.' });
+    await review.update({ status: 'rejected' });
+    res.json({ success: true, review });
   } catch (err) {
-    next(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
